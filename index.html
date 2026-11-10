@@ -1,8 +1,8 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>숲 속의 나 · v4 손으로 여는 포털</title>
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>숲 속의 나 · v4 손과 마우스로 여는 포털</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#071311;color:#ddf5eb;font:15px system-ui}header{padding:20px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}h1{font-size:20px;margin:0}button,label{background:#183b31;border:1px solid #426b5d;border-radius:8px;padding:10px;color:inherit}button{font:inherit;cursor:pointer}input{max-width:180px}main{position:relative}canvas{width:100%;height:65vh;min-height:380px;display:block;touch-action:none}p{margin:12px 20px;line-height:1.6}#preview{width:120px;height:145px;object-fit:cover;border:2px solid #a2edc7;border-radius:50%;background:#16372e}aside{display:flex;align-items:center;gap:12px;padding:12px 20px;flex-wrap:wrap}aside>div{flex:1;min-width:220px}aside label{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}#preview{flex-shrink:0;min-height:0;transform:none}small{display:block;color:#abd2c2}button:disabled{opacity:.5}select{font:inherit;max-width:100%}#handPreview{width:min(320px,100%);height:auto;min-height:0;background:#0b1e18}</style>
-<header><h1>숲 속의 나 · v4 손 인식</h1><button id="start">웹캠 켜기</button><button id="stop" disabled>웹캠 끄기</button><label>숲 이미지 <input id="bg" type="file" accept="image/*,.png,.jpg,.jpeg,.webp"></label><label>숲 영상 <input id="bgVideoFile" type="file" accept="video/*,.mp4,.m4v,.webm,.mov,.ogv"></label><label>불빛 이미지 <input id="glow" type="file" accept="image/*"></label><label>입력 <select id="inputMode"><option value="hand">손 인식</option><option value="mouse">마우스 테스트</option></select></label><label>그리기 <select id="drawMode"><option value="pinch">엄지·검지 붙이기</option><option value="always">검지 끝으로 바로 그리기</option></select></label><label><input id="showSkeleton" type="checkbox" checked> 손 스켈레톤 보기</label><button id="playBackground" hidden>배경 영상 재생</button></header>
-<p id="status" role="status">웹캠을 켜고 한 손을 보여주세요. 엄지와 검지를 붙인 채 원을 계속 그리면 숲과 얼굴 요정이 나타납니다. 손가락을 떼면 그리기를 멈춥니다.</p><p id="handStatus" role="status">손 인식 대기 중</p>
-<p><label for="portalProgress">포털 열림</label> <progress id="portalProgress" max="100" value="0" aria-label="포털 열림 정도"></progress> <span id="portalPercent">0%</span></p><main><canvas id="scene" aria-label="손끝으로 그리는 불꽃 포털과 웹캠 얼굴 요정"></canvas></main>
+<header><h1>숲 속의 나 · v4 손·마우스 입력</h1><button id="start">웹캠 켜기</button><button id="stop" disabled>웹캠 끄기</button><label>숲 이미지 <input id="bg" type="file" accept="image/*,.png,.jpg,.jpeg,.webp"></label><label>숲 영상 <input id="bgVideoFile" type="file" accept="video/*,.mp4,.m4v,.webm,.mov,.ogv"></label><label>불빛 이미지 <input id="glow" type="file" accept="image/*"></label><label>입력 <select id="inputMode"><option value="hand">손 인식 + 마우스</option><option value="mouse">마우스만</option></select></label><label>손 그리기 <select id="drawMode"><option value="pinch">엄지·검지 붙이기</option><option value="always">검지 끝으로 바로 그리기</option></select></label><label><input id="showSkeleton" type="checkbox" checked> 손 스켈레톤 보기</label><button id="playBackground" hidden>배경 영상 재생</button></header>
+<p id="status" role="status">마우스 왼쪽 버튼을 누른 채 원을 계속 그려보세요. 웹캠을 켜면 엄지·검지를 붙여 손으로도 그릴 수 있어요.</p><p id="handStatus" role="status">손 인식 대기 중</p>
+<p><label for="portalProgress">포털 열림</label> <progress id="portalProgress" max="100" value="0" aria-label="포털 열림 정도"></progress> <span id="portalPercent">0%</span></p><main><canvas id="scene" aria-label="손과 마우스로 그리는 불꽃 포털과 웹캠 얼굴 요정"></canvas></main>
 <aside><canvas id="handPreview" width="320" height="180" aria-label="거울 방향 웹캠 영상과 손 스켈레톤"></canvas><video id="camera" autoplay muted playsinline hidden></video><canvas id="preview" width="240" height="290" aria-label="요정에 들어가는 확대된 얼굴 미리보기"></canvas><div><span id="tracking" role="status">웹캠을 켜면 얼굴을 자동으로 찾아 확대합니다.</span><br><label>얼굴 확대 <input id="faceZoom" type="range" min="0.8" max="3" step="0.05" value="1"><output id="zoomValue">1.00배</output></label><small>자동 인식 준비에는 인터넷 연결이 필요합니다.<br>웹캠 영상은 기기 안에서 처리하며 업로드·녹화하지 않습니다.</small></div></aside>
 <script>
 (()=>{'use strict';const c=document.getElementById('scene'),screenContext=c.getContext('2d'),v=document.getElementById('camera'),status=document.getElementById('status'),start=document.getElementById('start'),stop=document.getElementById('stop');let stream=null,bg=null,bgVideo=null,bgVideoUrl=null,glow=null,w=900,h=500,x=450,y=300,tx=450,ty=300,last=0,phase=0,lastMotion=-Infinity,visibility=0,unlocked=false,drawing=false,trail=[],lightTrail=[],sparks=[],forestLife=[],lastBloom=null,portal=null;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -50,20 +50,20 @@ function faceCrop(vw,vh,box,zoom){
 
 
 const inputMode=document.getElementById('inputMode'),drawMode=document.getElementById('drawMode'),showSkeleton=document.getElementById('showSkeleton'),handStatus=document.getElementById('handStatus'),handPreview=document.getElementById('handPreview'),hg=handPreview.getContext('2d');
-let handDetector=null,handLoading=null,handFailed=false,lastHandDetect=-Infinity,lastHandVideo=-1,handPoints=null,handPointer=null,pinching=false;
+let handDetector=null,handLoading=null,handFailed=false,lastHandDetect=-Infinity,lastHandVideo=-1,handPoints=null,handPointer=null,pinching=false,activePointerId=null;
 const HAND_LINKS=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
-function resetHand(){endStroke();handPoints=null;handPointer=null;pinching=false;lastHandVideo=-1;lastHandDetect=-Infinity;}
-inputMode.onchange=()=>{resetHand();status.textContent=inputMode.value==='hand'?'손끝으로 원을 그려주세요. 엄지·검지를 붙이면 그리기 시작, 떼면 멈춥니다.':'마우스 버튼을 누른 채 원을 그려보세요.';if(stream&&inputMode.value==='hand')void prepareHandDetector();};
+function resetHand(){if(activePointerId===null)endStroke();handPoints=null;handPointer=null;pinching=false;lastHandVideo=-1;lastHandDetect=-Infinity;}
+inputMode.onchange=()=>{release();resetHand();status.textContent=inputMode.value==='hand'?'마우스로 원을 그리거나, 웹캠을 켜고 엄지·검지를 붙여 손으로 그려보세요.':'웹캠 없이도 마우스 왼쪽 버튼을 누른 채 원을 그릴 수 있어요.';if(stream&&inputMode.value==='hand')void prepareHandDetector();};
 drawMode.onchange=resetHand;
 async function prepareHandDetector(){
  if(handDetector){handFailed=false;return handDetector;}
  if(handLoading)return handLoading;
  handStatus.textContent='손 인식 모델을 불러오고 있어요…';
- handLoading=(async()=>{const {HandLandmarker,FilesetResolver}=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs');const files=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');handDetector=await HandLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5});handFailed=false;if(stream)handStatus.textContent='준비됐어요. 카메라에 손바닥과 손가락을 보여주세요.';return handDetector;})().catch(e=>{handLoading=null;handFailed=true;if(stream)handStatus.textContent='손 인식을 불러오지 못했어요. 인터넷·카메라 권한을 확인하고 웹캠을 다시 켜주세요. 마우스 테스트도 선택할 수 있어요.';return null;});return handLoading;
+ handLoading=(async()=>{const {HandLandmarker,FilesetResolver}=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs');const files=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');handDetector=await HandLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'},runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5});handFailed=false;if(stream)handStatus.textContent='준비됐어요. 카메라에 손바닥과 손가락을 보여주세요.';return handDetector;})().catch(e=>{handLoading=null;handFailed=true;if(stream)handStatus.textContent='손 인식을 불러오지 못했어요. 인터넷·카메라 권한을 확인하고 웹캠을 다시 켜주세요. 마우스로도 바로 그릴 수 있어요.';return null;});return handLoading;
 }
 function pixelDistance(a,b){return Math.hypot((a.x-b.x)*v.videoWidth,(a.y-b.y)*v.videoHeight);}
 function processHand(points){
- if(inputMode.value!=='hand')return;
+ if(inputMode.value!=='hand'||activePointerId!==null)return;
  if(!points){if(handPoints||drawing)resetHand();handStatus.textContent='손을 찾고 있어요. 한 손 전체를 카메라에 보여주세요.';return;}
  handPoints=points;
  const raw={x:Math.max(0,Math.min(w,(1-points[8].x)*w)),y:Math.max(0,Math.min(h,points[8].y*h))};
@@ -75,7 +75,7 @@ function processHand(points){
  else{endStroke();handStatus.textContent='손 인식 중 · 엄지와 검지를 붙이면 그리기 시작해요.';}
 }
 function updateHand(t){
- if(!stream||v.readyState<2||inputMode.value!=='hand')return;
+ if(!stream||v.readyState<2||inputMode.value!=='hand'||activePointerId!==null)return;
  if(handDetector&&!handFailed&&t-lastHandDetect>=65&&v.currentTime!==lastHandVideo){lastHandDetect=t;lastHandVideo=v.currentTime;try{const result=handDetector.detectForVideo(v,t);processHand(result.landmarks[0]||null);}catch(e){handFailed=true;resetHand();handStatus.textContent='손 인식이 멈췄어요. 웹캠을 껐다가 다시 켜주세요.';}}
 }
 function renderHandPreview(){
@@ -84,7 +84,7 @@ function renderHandPreview(){
  hg.save();hg.translate(handPreview.width,0);hg.scale(-1,1);hg.drawImage(v,0,0,handPreview.width,handPreview.height);hg.restore();
  if(showSkeleton.checked&&handPoints){hg.strokeStyle='#7df3b7';hg.lineWidth=2;for(const [a,b] of HAND_LINKS){hg.beginPath();hg.moveTo((1-handPoints[a].x)*320,handPoints[a].y*180);hg.lineTo((1-handPoints[b].x)*320,handPoints[b].y*180);hg.stroke();}for(let i=0;i<handPoints.length;i++){const p=handPoints[i];hg.fillStyle=i===8?'#ffce70':'#bcffe0';hg.beginPath();hg.arc((1-p.x)*320,p.y*180,i===8?5:2.5,0,Math.PI*2);hg.fill();}}
 }
-function drawHandCursor(){if(inputMode.value!=='hand'||!handPointer)return;g.save();g.strokeStyle=drawing?'#ffd18b':'#b4ead4';g.lineWidth=2;g.beginPath();g.arc(handPointer.x,handPointer.y,drawing?7:11,0,Math.PI*2);g.stroke();g.restore();}
+function drawHandCursor(){if(inputMode.value!=='hand'||!handPointer||activePointerId!==null)return;g.save();g.strokeStyle=drawing?'#ffd18b':'#b4ead4';g.lineWidth=2;g.beginPath();g.arc(handPointer.x,handPointer.y,drawing?7:11,0,Math.PI*2);g.stroke();g.restore();}
 
 function size(){const r=c.getBoundingClientRect(),d=1;w=r.width;h=r.height;c.width=w*d;c.height=h*d;g.setTransform(d,0,0,d,0,0);tx=Math.min(tx,w-40);ty=Math.min(ty,h-80);}new ResizeObserver(size).observe(c);size();
 function point(e){const r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
@@ -106,7 +106,7 @@ function meter(value){const percent=Math.round(value*100);document.getElementByI
 
 function beginStroke(p){drawing=true;trail=[p];lightTrail.push({...p,t:performance.now(),start:true});if(!portal)meter(0);target(p);}
 function endStroke(){drawing=false;trail=[];}
-c.addEventListener('pointerdown',e=>{if(inputMode.value!=='mouse'||e.button!==0)return;beginStroke(point(e));c.setPointerCapture(e.pointerId);});
+c.addEventListener('pointerdown',e=>{if(e.button!==0||activePointerId!==null)return;activePointerId=e.pointerId;resetHand();beginStroke(point(e));c.setPointerCapture(e.pointerId);});
 
 function emitSparks(from,to,t){
  const distance=Math.hypot(to.x-from.x,to.y-from.y),count=Math.min(18,Math.max(2,Math.ceil(distance/5)));
@@ -124,11 +124,11 @@ function drawSample(p){
   if(progress>=1){unlocked=true;if(!wasOpen)status.textContent='계속 원을 그려주세요. 새 불티가 생기고 지난 불티는 빠르게 사라집니다. 횟수 제한 없이 이어 그릴 수 있어요.';}
  }
 }
-c.addEventListener('pointermove',e=>{if(inputMode.value!=='mouse'||!drawing)return;const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];if(samples.length)for(const sample of samples)drawSample(point(sample));else drawSample(point(e));});
-function release(e){if(inputMode.value!=='mouse')return;endStroke();if(c.hasPointerCapture(e.pointerId))c.releasePointerCapture(e.pointerId);}
-c.addEventListener('pointerup',release);c.addEventListener('pointercancel',release);
+c.addEventListener('pointermove',e=>{if(e.pointerId!==activePointerId||!drawing)return;const samples=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[];if(samples.length)for(const sample of samples)drawSample(point(sample));else drawSample(point(e));});
+function release(e){if(activePointerId===null||(e&&e.pointerId!==activePointerId))return;const pointerId=activePointerId;activePointerId=null;resetHand();if(c.hasPointerCapture(pointerId))c.releasePointerCapture(pointerId);}
+c.addEventListener('pointerup',release);c.addEventListener('pointercancel',release);c.addEventListener('lostpointercapture',release);window.addEventListener('blur',()=>release());
 
-start.onclick=async()=>{start.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('localhost 또는 HTTPS 주소에서 열어주세요.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});v.srcObject=stream;await v.play();lastVideoTime=-1;lastDetect=-Infinity;trackingFailed=false;stop.disabled=false;void prepareFaceDetector();if(inputMode.value==='hand')void prepareHandDetector();status.textContent='웹캠이 켜졌어요. 얼굴은 자동으로 확대됩니다. 엄지와 검지를 붙인 채 손끝으로 원을 그려보세요.';}catch(e){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;start.disabled=false;status.textContent='카메라를 켜지 못했어요. 브라우저 카메라 권한과 다른 앱의 사용 여부를 확인해주세요. '+e.message;}};
+start.onclick=async()=>{start.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('localhost 또는 HTTPS 주소에서 열어주세요.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});v.srcObject=stream;await v.play();lastVideoTime=-1;lastDetect=-Infinity;trackingFailed=false;stop.disabled=false;void prepareFaceDetector();if(inputMode.value==='hand')void prepareHandDetector();status.textContent=inputMode.value==='hand'?'웹캠이 켜졌어요. 손끝이나 마우스로 원을 그려보세요. 엄지·검지를 붙이면 손으로 그릴 수 있어요.':'웹캠이 켜졌어요. 얼굴은 자동으로 확대됩니다. 마우스 왼쪽 버튼을 누른 채 원을 그려보세요.';}catch(e){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;start.disabled=false;status.textContent='카메라를 켜지 못했어요. 브라우저 카메라 권한과 다른 앱의 사용 여부를 확인해주세요. '+e.message;}};
 function end(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;v.srcObject=null;resetHand();handStatus.textContent='손 인식 대기 중';hg.clearRect(0,0,320,180);faceBox=null;lastFaceSeen=-Infinity;pg.clearRect(0,0,preview.width,preview.height);tracking.textContent='웹캠을 켜면 얼굴을 자동으로 찾아 확대합니다.';start.disabled=false;stop.disabled=true;status.textContent='웹캠을 껐어요. 요정 움직임은 계속 테스트할 수 있어요.';}stop.onclick=end;window.addEventListener('pagehide',end);
 
 const playBackground=document.getElementById('playBackground');let assetRevision=0;
