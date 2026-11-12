@@ -3,13 +3,22 @@ import { createHandVisual } from './hand-visual.js';
 import { createReleaseState, FLIGHT_SECONDS } from './release-state.js';
 import { classifyHandGrip } from './hand-grip.js';
 import { createOrbState } from './orb-state.js';
+import { createSoundscape } from './soundscape.js';
 
 export function startExperience(view) {
   const ritual=createReleaseState();
   const orb=createOrbState();
   const visual=createHandVisual(document.getElementById('hand-light'));
-  const ids=['camera-start','mouse-start','stop-camera','restart','mouse-action','instruction-title','instruction-detail','tracking-status','lift-progress','status','input-note'];
+  const ids=['camera-start','mouse-start','stop-camera','restart','sound-toggle','mouse-action','instruction-title','instruction-detail','tracking-status','lift-progress','status','input-note'];
   const ui=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
+  let soundStatus={state:'idle',muted:false};
+  const sound=createSoundscape({onStatus(status){
+    soundStatus=status;
+    const button=ui['sound-toggle'];
+    button.textContent=status.state==='error'?'소리 다시 켜기':status.state==='idle'?'소리 켜기':status.muted?'소리 꺼짐':status.state==='loading'?'소리 준비 중…':'소리 켜짐';
+    button.setAttribute('aria-pressed',String(!status.muted&&!['idle','error'].includes(status.state)));
+    button.title=status.state==='error'?'소리를 불러오지 못했어요. 눌러서 다시 시도해 주세요.':status.muted||status.state==='idle'?'음악과 효과음 켜기':'음악과 효과음 끄기';
+  }});
   const surface=document.getElementById('scene');
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mix=(a,b,t)=>a+(b-a)*t;
@@ -30,10 +39,12 @@ export function startExperience(view) {
     ui['stop-camera'].hidden=!mode;
     text('stop-camera',mode==='camera'?'카메라 끄기':'체험 닫기');
     ui.restart.hidden=!mode;
+    ui['sound-toggle'].hidden=!mode;
     ui['mouse-action'].hidden=mode!=='mouse';
     ui['input-note'].hidden=mode!=='mouse';
   }
   function reset() {
+    sound.reset();
     ritual.reset();
     orb.reset();
     slotIds={left:null,right:null};
@@ -51,20 +62,30 @@ export function startExperience(view) {
       if(mode!=='camera') return;
       text('tracking-status',message);
       if(state==='error') {
+        sound.stop();
         mode=null;reset();showActive();text('status',message);ui.status.hidden=false;
       }
     },
   });
   ui['camera-start'].addEventListener('click',async()=>{
+    sound.start();
     mode='camera';reset();showActive();await handInput.start();
   });
   ui['mouse-start'].addEventListener('click',()=>{
+    sound.start();
     mode='mouse';handInput.stop();reset();showActive();
   });
   ui['stop-camera'].addEventListener('click',()=>{
+    sound.stop();
     mode=null;handInput.stop();reset();showActive();
   });
   ui.restart.addEventListener('click',reset);
+  ui['sound-toggle'].addEventListener('click',()=>{
+    if(['error','idle'].includes(soundStatus.state)) {
+      sound.setMuted(false);
+      sound.start();
+    } else sound.setMuted(!soundStatus.muted);
+  });
   addEventListener('pagehide',()=>handInput.stop());
   addEventListener('resize',()=>{visual.resize();drawn.clear();});
 
@@ -229,6 +250,7 @@ export function startExperience(view) {
     }
     if(oldPhase!=='released'&&state.phase==='released') releaseAnchors={left:{...layout.left},right:{...layout.right}};
     view.setState({active:!!mode,phase:phase(),energy:orb.state.energy,motion:orb.state.motion,turn:orb.state.turn,phaseProgress:orb.state.phaseProgress,lift:state.lift,offset,tilt,progress:state.progress,leftHeld:state.leftHeld,rightHeld:state.rightHeld,handLost:state.handLost});
+    sound.update({active:!!mode,phase:phase(),energy:orb.state.energy,motion:orb.state.motion,progress:state.progress});
     updateUI();
   });
 
