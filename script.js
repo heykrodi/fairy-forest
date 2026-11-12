@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { startExperience } from './experience.js';
 import { createEmberCharacter } from './ember-character.js';
+import { createLanternFinale } from './lantern-finale.js';
 
 // The lit paper lantern follows the hands, then travels into the same 3D sky.
 const canvas = document.querySelector('#scene');
@@ -39,23 +40,25 @@ function createScene() {
       uTop: { value: new THREE.Color('#12182e') },
       uBottom: { value: new THREE.Color('#58404a') },
       uWarmth: { value: 1 },
+      uLookUp: { value: 0 },
     },
     vertexShader: `varying vec2 vUv;
       void main() { vUv = uv; gl_Position = vec4(position.xy, 0.9999, 1.0); }`,
     fragmentShader: `
       varying vec2 vUv;
-      uniform float uAspect, uWarmth;
+      uniform float uAspect, uWarmth, uLookUp;
       uniform vec2 uGlowCenter;
       uniform vec3 uTop, uBottom;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
       void main() {
-        vec3 color = mix(uBottom, uTop, smoothstep(0.0, 0.95, vUv.y));
+        float skyY = vUv.y + uLookUp * 0.29;
+        vec3 color = mix(uBottom, uTop, smoothstep(0.0, 0.95, skyY));
         vec2 p = (vUv-uGlowCenter) * vec2(uAspect,1.0);
         color += vec3(0.032,0.012,0.009) * exp(-dot(p,p)*8.5) * uWarmth;
         float hill = 0.054 + 0.021*sin(vUv.x*7.0) + 0.013*sin(vUv.x*19.0+1.0);
-        color = mix(color, vec3(0.018,0.017,0.032), 0.44*(1.0-smoothstep(hill-0.012,hill+0.024,vUv.y)));
+        color = mix(color, vec3(0.018,0.017,0.032), 0.44*(1.0-smoothstep(hill-0.012,hill+0.024,skyY)));
         float hill2 = 0.016 + 0.018*sin(vUv.x*9.0+2.0);
-        color = mix(color, vec3(0.010,0.014,0.026), 0.4*(1.0-smoothstep(hill2-0.01,hill2+0.01,vUv.y)));
+        color = mix(color, vec3(0.010,0.014,0.026), 0.4*(1.0-smoothstep(hill2-0.01,hill2+0.01,skyY)));
         color += (hash(gl_FragCoord.xy)-0.5)*0.0012;
         gl_FragColor = vec4(color,1.0);
       }`,
@@ -72,8 +75,8 @@ function createScene() {
   };
   const starPositions = [];
   const starSizes = [];
-  for (let i = 0; i < 62; i++) {
-    starPositions.push((random() - 0.5) * 48, random() * 21 - 5, -18 - random() * 10);
+  for (let i = 0; i < 112; i++) {
+    starPositions.push((random() - 0.5) * 48, i < 62 ? random() * 21 - 5 : 16 + random() * 24, -18 - random() * 10);
     starSizes.push(0.7 + random() * 1.6);
   }
   const starGeometry = new THREE.BufferGeometry();
@@ -261,6 +264,8 @@ function createScene() {
   glow.scale.set(3.7, 3.7, 1);
   glow.position.z = -0.3;
   lantern.add(glow);
+  const finale = createLanternFinale(profile, glowTexture, random);
+  scene.add(finale.group);
 
   // A clear little sphere gathers fine currents of light between the palms.
   const orb = new THREE.Group();
@@ -279,6 +284,7 @@ function createScene() {
   });
   const orbShell = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 24), orbMaterial);
   orb.add(orbShell);
+  orbShell.visible = false;
   const emberCharacter = createEmberCharacter();
   orb.add(emberCharacter.group);
   const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
@@ -287,6 +293,7 @@ function createScene() {
   const currents = new THREE.Group();
   currents.position.z = -0.18;
   orb.add(currents);
+  currents.visible = false;
   const currentMaterials = [];
   for (let strand = 0; strand < 3; strand++) {
     const points = [];
@@ -319,6 +326,7 @@ function createScene() {
   const sparks = new THREE.Points(sparkGeometry, sparkMaterial);
   sparks.frustumCulled = false;
   orb.add(sparks);
+  sparks.visible = false;
 
   const ray = new THREE.Raycaster();
   const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
@@ -401,6 +409,13 @@ function createScene() {
     const phase = ritualView.phase;
     const reducedMotion = motionPreference.matches;
     const flying = phase === 'released' || phase === 'complete';
+    const flightProgress = flying ? THREE.MathUtils.clamp(ritualView.progress, 0, 1) : 0;
+    const lookUp = reducedMotion ? 0 : THREE.MathUtils.smoothstep(flightProgress, 0.075, 0.92);
+    const restPitch = Math.atan2(2.2, distance);
+    const finalPitch = reducedMotion ? restPitch : THREE.MathUtils.degToRad(32);
+    camera.rotation.x = THREE.MathUtils.lerp(restPitch, finalPitch, lookUp);
+    camera.updateMatrixWorld();
+    sky.material.uniforms.uLookUp.value = lookUp;
     const prelude = ritualView.active && ['gathering', 'approaching', 'igniting'].includes(phase);
     const phaseProgress = THREE.MathUtils.clamp(ritualView.phaseProgress || 0, 0, 1);
     const energy = phase === 'gathering' ? THREE.MathUtils.clamp(ritualView.energy || 0, 0, 1) : 1;
@@ -416,21 +431,24 @@ function createScene() {
 
     if (flying && !flight) {
       // Capture the exact held pose before starting any flight movement.
-      flight = { position: lantern.position.clone(), rotation: lantern.rotation.clone(), scale: lantern.scale.clone() };
+      flight = { position: lantern.position.clone(), rotation: lantern.rotation.clone(), scale: lantern.scale.clone(), ending: 0 };
       velocity.set(0, 0, 0);
     } else if (!flying && flight) {
       // A deliberate restart begins again within reach, never at the far endpoint.
       flight = null;
+      finale.group.visible = false;
       velocity.set(0, 0, 0);
       initialized = false;
     }
 
     if (flying && flight) {
-      const p = phase === 'complete' ? 1 : THREE.MathUtils.clamp(ritualView.progress || 0, 0, 1);
+      const p = flightProgress;
+      if (phase === 'complete') flight.ending += dt;
+      const afterglow = reducedMotion ? 0 : 1 - Math.exp(-flight.ending * 0.16);
       lantern.position.copy(flight.position).add(new THREE.Vector3(
         reducedMotion ? 0 : 0.9 * p + Math.sin(p * Math.PI) * 0.18,
-        2.5 * p + 19.5 * p * p,
-        -8 * p - 26 * p * p,
+        2.5 * p + (reducedMotion ? 15 : 25.5) * p * p + afterglow * 1.3,
+        -8 * p - 26 * p * p - afterglow * 2.2,
       ));
       lantern.scale.copy(flight.scale);
       lantern.rotation.copy(flight.rotation);
@@ -438,6 +456,7 @@ function createScene() {
         lantern.rotation.z += Math.sin(p * Math.PI * 0.8) * 0.055;
         lantern.rotation.y += p * 0.22;
       }
+      finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion);
     } else if (prelude) {
       lantern.rotation.x = -0.035;
       lantern.rotation.y = -0.08;
@@ -512,13 +531,13 @@ function createScene() {
       const born = THREE.MathUtils.smoothstep(energy, 0.35, 0.90);
       const fading = phase === 'igniting' ? 1 - THREE.MathUtils.smoothstep(phaseProgress, 0.60, 0.82) : 1;
       const transferScale = phase === 'igniting' ? THREE.MathUtils.lerp(1, 0.42, THREE.MathUtils.smoothstep(phaseProgress, 0.15, 0.58)) : 1;
-      emberCharacter.group.scale.setScalar((0.035 + energy * 0.205) * transferScale);
+      emberCharacter.group.scale.setScalar((0.015 + THREE.MathUtils.smoothstep(energy, 0, 1) * 0.225) * transferScale);
       emberCharacter.group.quaternion.copy(camera.quaternion);
       emberCharacter.update({time:elapsed,energy,opacity:THREE.MathUtils.smoothstep(energy,0.04,0.32)*fading,motion,reducedMotion});
       orbMaterial.uniforms.uEnergy.value = energy;
       orbMaterial.uniforms.uOpacity.value = (1 - born * 0.97) * fading;
       orbShell.scale.setScalar(1 - born * 0.25);
-      orbGlow.material.opacity = (0.12 + energy * 1.8) * fading;
+      orbGlow.material.opacity = THREE.MathUtils.smoothstep(energy, 0.04, 1) * 0.65 * fading;
       currents.rotation.z = reducedMotion ? 0 : orbTime + shownTurn * 0.8;
       currents.rotation.y = reducedMotion ? 0 : Math.sin(orbTime * 0.5) * 0.22;
       currentMaterials.forEach((material, index) => {

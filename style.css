@@ -170,7 +170,12 @@ button:focus-visible { outline: 2px solid #f1d4a2; outline-offset: 6px; }
 #lift-progress::-webkit-progress-value { background: #e6c790; border-radius: 2px; }
 #lift-progress::-moz-progress-bar { background: #e6c790; }
 #input-note { margin: 0 0 12px; color: #dbccba; font-size: 10px; line-height: 1.7; }
-body[data-phase="released"] .instruction, body[data-phase="complete"] .instruction { transition: opacity 1s; }
+body[data-phase="released"] .instruction, body[data-phase="complete"] .instruction {
+  inset: auto 24px clamp(24px, 5vh, 48px);
+  max-width: none;
+  text-align: center;
+}
+body[data-phase="released"] .instruction .eyebrow, body[data-phase="complete"] .instruction .eyebrow { display: none; }
 
 .active-controls { display: none; position: fixed; z-index: 3; left: 20px; right: 20px; bottom: 32px; text-align: center; pointer-events: none; }
 .active-controls button { pointer-events: auto; }
