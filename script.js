@@ -5,8 +5,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { startExperience } from './experience.js?v=sound-1';
 import { createEmberCharacter } from './ember-character.js';
-import { createLanternFinale } from './lantern-finale.js';
-import { createParkFinale } from './park-finale.js';
+import { createLanternFinale } from './lantern-finale.js?v=park-2';
+import { createParkFinale } from './park-finale.js?v=park-2';
 
 // The lit paper lantern follows the hands, then travels into the same 3D sky.
 const canvas = document.querySelector('#scene');
@@ -265,7 +265,8 @@ function createScene() {
   glow.scale.set(3.7, 3.7, 1);
   glow.position.z = -0.3;
   lantern.add(glow);
-  const finale = createLanternFinale(profile, glowTexture, random);
+  const parkView = { height: 6, pullback: 27, pitch: 0.085, fov: 50 };
+  const finale = createLanternFinale(profile, glowTexture, random, parkView);
   scene.add(finale.group);
   const park = createParkFinale(random);
   scene.add(park.group);
@@ -420,11 +421,11 @@ function createScene() {
     const retreat = flying && flight ? THREE.MathUtils.smoothstep(flight.ending, 2, 16) : 0;
     // Reduced-motion viewers get a fixed wide shot instead of a travelling camera.
     const cameraRetreat = reducedMotion ? (phase === 'complete' ? 1 : 0) : retreat;
-    camera.position.set(0, THREE.MathUtils.lerp(-2.2, 6, cameraRetreat), distance + cameraRetreat * 27);
-    camera.fov = THREE.MathUtils.lerp(36, 50, cameraRetreat);
+    camera.position.set(0, THREE.MathUtils.lerp(-2.2, parkView.height, cameraRetreat), distance + cameraRetreat * parkView.pullback);
+    camera.fov = THREE.MathUtils.lerp(36, parkView.fov, cameraRetreat);
     camera.updateProjectionMatrix();
     camera.rotation.x = THREE.MathUtils.lerp(
-      THREE.MathUtils.lerp(restPitch, finalPitch, lookUp), 0.085, cameraRetreat);
+      THREE.MathUtils.lerp(restPitch, finalPitch, lookUp), parkView.pitch, cameraRetreat);
     park.update(retreat);
     finaleOrigin.set(0, -2.2, distance);
     camera.updateMatrixWorld();
@@ -469,7 +470,7 @@ function createScene() {
         lantern.rotation.z += Math.sin(p * Math.PI * 0.8) * 0.055;
         lantern.rotation.y += p * 0.22;
       }
-      finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion, finaleOrigin);
+      finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion, finaleOrigin, 1 - Math.exp(-flight.ending * 0.16));
     } else if (prelude) {
       lantern.rotation.x = -0.035;
       lantern.rotation.y = -0.08;

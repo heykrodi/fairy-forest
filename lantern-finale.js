@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
-export function createLanternFinale(profile, glowTexture, random) {
+export function createLanternFinale(profile, glowTexture, random, parkView) {
   const columns = 12;
   const rows = 8;
-  const count = columns * rows;
+  const firstWave = columns * rows;
+  const count = firstWave + 144;
   const group = new THREE.Group();
   group.visible = false;
 
@@ -34,6 +35,21 @@ export function createLanternFinale(profile, glowTexture, random) {
   }
 
   const paths = Array.from({ length: count }, (_, index) => {
+    if (index >= firstWave) {
+      // The pullback reveals more distant wishes across the whole riverside sky.
+      // These positions belong to the world, not the moving camera.
+      return {
+        late: true,
+        across: (random() * 2 - 1) * 0.97,
+        above: -0.14 + random() * 1.09,
+        depth: 65 + random() * 65,
+        size: 0.24 + random() * 0.38,
+        start: 0.06 + random() * 0.49,
+        roll: (random() - 0.5) * 0.20,
+        phase: random() * Math.PI * 2,
+        light: 0.60 + random() * 0.34,
+      };
+    }
     const row = Math.floor(index / columns);
     const column = index % columns;
     let across = ((column + 0.18 + random() * 0.64) / columns * 2 - 1) * 0.93;
@@ -52,15 +68,16 @@ export function createLanternFinale(profile, glowTexture, random) {
   });
   const transform = new THREE.Object3D();
 
-  function update(camera, finalPitch, progress, afterglow, time, reducedMotion, origin) {
+  function update(camera, finalPitch, progress, afterglow, time, reducedMotion, origin, ending = afterglow) {
     const halfHeight = Math.tan(THREE.MathUtils.degToRad(18));
     const sinPitch = Math.sin(finalPitch), cosPitch = Math.cos(finalPitch);
     let visible = 0;
     for (const path of paths) {
-      if (progress <= path.start) continue;
-      const t = (progress - path.start) / (1 - path.start);
+      const phase = path.late ? ending : progress;
+      if (phase <= path.start) continue;
+      const t = (phase - path.start) / (1 - path.start);
       const travel = THREE.MathUtils.smoothstep(t, 0, 1);
-      const entrance = THREE.MathUtils.smoothstep(t, 0, 0.12);
+      const entrance = THREE.MathUtils.smoothstep(t, 0, path.late ? 0.5 : 0.12);
       const up = path.above * path.depth * halfHeight;
       const sway = reducedMotion ? 0 : Math.sin(time * 0.36 + path.phase);
       const size = path.size * entrance;
@@ -69,6 +86,16 @@ export function createLanternFinale(profile, glowTexture, random) {
         origin.y + path.depth * sinPitch + up * cosPitch - path.depth * 0.84 * (1 - travel) + afterglow * 1.3,
         origin.z - path.depth * cosPitch + up * sinPitch + path.depth * 0.10 * (1 - travel) - afterglow * 2.2,
       );
+      if (path.late) {
+        const horizon = Math.tan(THREE.MathUtils.degToRad(parkView.fov / 2));
+        const vertical = path.above * path.depth * horizon;
+        transform.position.set(
+          path.across * path.depth * horizon * camera.aspect + sway * 0.18,
+          parkView.height + path.depth * Math.sin(parkView.pitch) + vertical * Math.cos(parkView.pitch)
+            - (reducedMotion ? 0 : (1 - travel) * 2.4),
+          origin.z + parkView.pullback - path.depth * Math.cos(parkView.pitch) + vertical * Math.sin(parkView.pitch),
+        );
+      }
       transform.rotation.set(0, path.phase, path.roll + sway * 0.07);
       transform.scale.setScalar(size);
       transform.updateMatrix();
