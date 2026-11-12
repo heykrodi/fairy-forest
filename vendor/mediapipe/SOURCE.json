@@ -1,0 +1,9 @@
+{
+  "package": "@mediapipe/tasks-vision",
+  "version": "1.2.3",
+  "tarball": "https://registry.npmjs.org/@mediapipe/tasks-vision/-/tasks-vision-1.2.3.tgz",
+  "integrity": "sha512-sxJyfhbN+EamexhaaCmUlw7v8vWWMum7VDsORe6d4c8Dk/xlI4qiIgoSw9cE9hpvYhVRRVLIA8y605FbqWkNeQ==",
+  "model": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+  "model_sha256": "fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1",
+  "license_source": "https://raw.githubusercontent.com/google-ai-edge/mediapipe/master/LICENSE"
+}

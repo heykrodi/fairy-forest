@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#121323">
+    <meta name="description" content="두 손 사이에서 작은 불씨를 깨우고, 따뜻해진 풍등에 새해의 소원을 담아 밤하늘로 놓아주세요.">
+    <title>소원을 담은 밤</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./style.css">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body data-active="false" data-phase="gathering">
+    <canvas id="scene" role="img" aria-label="두 손 사이에서 불씨를 만들고 풍등을 밝혀 밤하늘로 날리는 체험"></canvas>
+    <canvas id="hand-light" aria-hidden="true"></canvas>
+
+    <header class="masthead">
+      <a class="wordmark" href="./" aria-label="소원을 담은 밤, 처음 화면">
+        <svg viewBox="0 0 24 30" fill="none" aria-hidden="true">
+          <path d="M6 5c3-2 9-2 12 0l2 10-5 10H9L4 15 6 5Z" />
+          <path d="M9 25h6M9 5l1 18M15 5l-1 18M7 2h10" />
+          <path class="mark-flame" d="M12 16c-3 3-2 5 0 5s3-2 0-5Z" />
+        </svg>
+        <span>소원을 담은 밤</span>
+      </a>
+      <div class="masthead-actions">
+        <span class="masthead-note">한 해의 시작에</span>
+        <button id="stop-camera" class="quiet-button" type="button" hidden>카메라 끄기</button>
+        <button id="restart" class="quiet-button" type="button" hidden>처음부터 다시</button>
+      </div>
+    </header>
+
+    <main id="intro" class="introduction">
+      <p class="eyebrow">고요한 밤, 작은 온기 하나</p>
+      <h1>마음에 품은 빛,<br>하늘에 닿기를.</h1>
+      <span class="quiet-line" aria-hidden="true"></span>
+      <p class="description">두 손 사이에서 작은 온기를 깨우고,<br>소원을 담은 풍등을 놓아주세요.</p>
+      <div class="controls" aria-label="체험 시작 방법">
+        <button id="camera-start" class="primary-button" type="button" aria-describedby="privacy-note">손으로 시작하기 <span aria-hidden="true">↗</span></button>
+        <button id="mouse-start" class="text-button" type="button">마우스로 먼저 체험하기</button>
+        <p id="privacy-note" class="privacy-note">카메라는 손동작만 읽어요.<br>영상은 저장하거나 전송하지 않아요.</p>
+      </div>
+    </main>
+
+    <section id="instruction" class="instruction" aria-live="polite" aria-atomic="true" aria-label="현재 할 동작">
+      <p class="eyebrow">당신의 소원이 하늘에 닿는 시간</p>
+      <h2 id="instruction-title">두 손 사이에, 작은 온기.</h2>
+      <p id="instruction-detail">둥근 구슬을 감싸듯, 두 손을 번갈아 천천히 움직여보세요.</p>
+      <progress id="lift-progress" max="1" value="0" aria-label="풍등을 들어 올린 높이" hidden></progress>
+    </section>
+
+    <div class="active-controls">
+      <p id="input-note" hidden>마우스 체험 · 화면의 두 손을 함께 움직여요</p>
+      <p id="tracking-status" role="status" aria-live="polite"></p>
+      <button id="mouse-action" class="primary-button" type="button" hidden>테두리 잡기</button>
+    </div>
+
+    <p id="status" role="status">밤하늘을 준비하고 있어요.</p>
+
+    <footer class="scene-caption">
+      <span class="caption-star" aria-hidden="true">✦</span>
+      <p>잠시 머물고, 천천히 놓아주세요</p>
+    </footer>
+
+    <noscript>풍등을 보려면 브라우저의 JavaScript를 켜 주세요.</noscript>
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>
