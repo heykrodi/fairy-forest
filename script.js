@@ -6,6 +6,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { startExperience } from './experience.js';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js';
+import { createParkFinale } from './park-finale.js';
 
 // The lit paper lantern follows the hands, then travels into the same 3D sky.
 const canvas = document.querySelector('#scene');
@@ -25,7 +26,7 @@ function createScene() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.90;
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   let tick = () => {};
   let afterFrame = () => {};
@@ -266,6 +267,9 @@ function createScene() {
   lantern.add(glow);
   const finale = createLanternFinale(profile, glowTexture, random);
   scene.add(finale.group);
+  const park = createParkFinale(random);
+  scene.add(park.group);
+  const finaleOrigin = new THREE.Vector3();
 
   // A clear little sphere gathers fine currents of light between the palms.
   const orb = new THREE.Group();
@@ -413,7 +417,16 @@ function createScene() {
     const lookUp = reducedMotion ? 0 : THREE.MathUtils.smoothstep(flightProgress, 0.075, 0.92);
     const restPitch = Math.atan2(2.2, distance);
     const finalPitch = reducedMotion ? restPitch : THREE.MathUtils.degToRad(32);
-    camera.rotation.x = THREE.MathUtils.lerp(restPitch, finalPitch, lookUp);
+    const retreat = flying && flight ? THREE.MathUtils.smoothstep(flight.ending, 2, 16) : 0;
+    // Reduced-motion viewers get a fixed wide shot instead of a travelling camera.
+    const cameraRetreat = reducedMotion ? (phase === 'complete' ? 1 : 0) : retreat;
+    camera.position.set(0, THREE.MathUtils.lerp(-2.2, 6, cameraRetreat), distance + cameraRetreat * 27);
+    camera.fov = THREE.MathUtils.lerp(36, 50, cameraRetreat);
+    camera.updateProjectionMatrix();
+    camera.rotation.x = THREE.MathUtils.lerp(
+      THREE.MathUtils.lerp(restPitch, finalPitch, lookUp), 0.085, cameraRetreat);
+    park.update(retreat);
+    finaleOrigin.set(0, -2.2, distance);
     camera.updateMatrixWorld();
     sky.material.uniforms.uLookUp.value = lookUp;
     const prelude = ritualView.active && ['gathering', 'approaching', 'igniting'].includes(phase);
@@ -456,7 +469,7 @@ function createScene() {
         lantern.rotation.z += Math.sin(p * Math.PI * 0.8) * 0.055;
         lantern.rotation.y += p * 0.22;
       }
-      finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion);
+      finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion, finaleOrigin);
     } else if (prelude) {
       lantern.rotation.x = -0.035;
       lantern.rotation.y = -0.08;

@@ -1,3 +1,4 @@
+export const FLIGHT_SECONDS = 24;
 // A release is an intentional sequence: hold, raise, then open both tracked hands.
 // Missing/replaced hands must regrip before this sequence can continue.
 export function createReleaseState() {
@@ -26,9 +27,9 @@ export function createReleaseState() {
     const elapsed=Number.isFinite(dt)?Math.max(0,Math.min(dt,0.1)):0;
     if(state.phase==='complete') return state;
     if(state.phase==='released') {
-      flightTime=Math.min(12,flightTime+elapsed);
-      state.progress=flightTime/12;
-      if(flightTime>=12-1e-9) { state.phase='complete'; state.progress=1; }
+      flightTime=Math.min(FLIGHT_SECONDS,flightTime+elapsed);
+      state.progress=flightTime/FLIGHT_SECONDS;
+      if(flightTime>=FLIGHT_SECONDS-1e-9) { state.phase='complete'; state.progress=1; }
       return state;
     }
     const left=input.left,right=input.right;

@@ -142,13 +142,13 @@ test('after raising, lowering a little before opening is still intentional relea
   assert.equal(ritual.state.phase,'released');
 });
 
-test('flight completes once after twelve seconds and ignores further hand loss',()=>{
+test('flight completes once after twenty-four seconds and ignores further hand loss',()=>{
   const ritual=raised();
   advance(ritual,0.18,input(opened,opened));
-  advance(ritual,6,{});
+  advance(ritual,12,{});
   assert.equal(ritual.state.phase,'released');
   assert.ok(Math.abs(ritual.state.progress-0.5)<1e-9);
-  advance(ritual,6,{});
+  advance(ritual,12,{});
   assert.equal(ritual.state.phase,'complete');
   assert.equal(ritual.state.progress,1);
   advance(ritual,2,input());

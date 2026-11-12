@@ -1,6 +1,6 @@
 import { createHandInput } from './hand-input.js';
 import { createHandVisual } from './hand-visual.js';
-import { createReleaseState } from './release-state.js';
+import { createReleaseState, FLIGHT_SECONDS } from './release-state.js';
 import { classifyHandGrip } from './hand-grip.js';
 import { createOrbState } from './orb-state.js';
 
@@ -236,7 +236,7 @@ export function startExperience(view) {
   view.onAfterFrame((dt,time)=>{
     const layout=view.getLayout(),state=ritual.state,currentPhase=phase();
     const flight=['released','complete'].includes(state.phase);
-    const elapsed=state.progress*12;
+    const elapsed=state.progress*FLIGHT_SECONDS;
     const hands=[];
     for(const side of sides) {
       const input=inputs[side];

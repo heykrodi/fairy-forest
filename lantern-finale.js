@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 export function createLanternFinale(profile, glowTexture, random) {
-  const columns = 7;
-  const rows = 6;
+  const columns = 12;
+  const rows = 8;
   const count = columns * rows;
   const group = new THREE.Group();
   group.visible = false;
@@ -52,8 +52,8 @@ export function createLanternFinale(profile, glowTexture, random) {
   });
   const transform = new THREE.Object3D();
 
-  function update(camera, finalPitch, progress, afterglow, time, reducedMotion) {
-    const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  function update(camera, finalPitch, progress, afterglow, time, reducedMotion, origin) {
+    const halfHeight = Math.tan(THREE.MathUtils.degToRad(18));
     const sinPitch = Math.sin(finalPitch), cosPitch = Math.cos(finalPitch);
     let visible = 0;
     for (const path of paths) {
@@ -62,12 +62,12 @@ export function createLanternFinale(profile, glowTexture, random) {
       const travel = THREE.MathUtils.smoothstep(t, 0, 1);
       const entrance = THREE.MathUtils.smoothstep(t, 0, 0.12);
       const up = path.above * path.depth * halfHeight;
-      const sway = reducedMotion ? 0 : Math.sin(time * 0.66 + path.phase);
+      const sway = reducedMotion ? 0 : Math.sin(time * 0.36 + path.phase);
       const size = path.size * entrance;
       transform.position.set(
         path.across * path.depth * halfHeight * camera.aspect * (0.78 + 0.22 * travel) + sway * 0.22 * entrance,
-        camera.position.y + path.depth * sinPitch + up * cosPitch - path.depth * 0.84 * (1 - travel) + afterglow * 1.3,
-        camera.position.z - path.depth * cosPitch + up * sinPitch + path.depth * 0.10 * (1 - travel) - afterglow * 2.2,
+        origin.y + path.depth * sinPitch + up * cosPitch - path.depth * 0.84 * (1 - travel) + afterglow * 1.3,
+        origin.z - path.depth * cosPitch + up * sinPitch + path.depth * 0.10 * (1 - travel) - afterglow * 2.2,
       );
       transform.rotation.set(0, path.phase, path.roll + sway * 0.07);
       transform.scale.setScalar(size);
