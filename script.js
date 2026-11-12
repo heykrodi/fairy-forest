@@ -6,7 +6,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { startExperience } from './experience.js?v=sound-1';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js?v=park-2';
-import { createParkFinale } from './park-finale.js?v=park-2';
+import { createParkFinale } from './park-finale.js?v=park-life-1';
 
 // The lit paper lantern follows the hands, then travels into the same 3D sky.
 const canvas = document.querySelector('#scene');
@@ -426,7 +426,7 @@ function createScene() {
     camera.updateProjectionMatrix();
     camera.rotation.x = THREE.MathUtils.lerp(
       THREE.MathUtils.lerp(restPitch, finalPitch, lookUp), parkView.pitch, cameraRetreat);
-    park.update(retreat);
+    park.update(retreat, flying && flight ? flight.ending : 0, reducedMotion);
     finaleOrigin.set(0, -2.2, distance);
     camera.updateMatrixWorld();
     sky.material.uniforms.uLookUp.value = lookUp;

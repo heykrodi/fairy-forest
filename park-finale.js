@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { createSeatedDalmatian } from './park-dalmatian.js?v=park-life-1';
 
 // A small, stylized riverside gathering, viewed from behind the seated visitors.
 export function createParkFinale(random) {
   const group = new THREE.Group();
   group.visible = false;
   const materials = [];
+  const visitors = [];
+  let dogAnimation;
   function material(color, glow = false) {
     const mat = glow ? new THREE.MeshBasicMaterial({ color }) : new THREE.MeshStandardMaterial({ color, roughness: 0.95 });
     mat.transparent = true;
@@ -67,18 +70,22 @@ export function createParkFinale(random) {
     const torso = new THREE.Group();
     torso.position.set(0, 0.32, 0);
     torso.rotation.x = leaning ? -0.22 : stretched ? -0.08 : 0.03;
+    torso.userData.animated = true;
     avatar.add(torso);
     mesh(sphere, coat, 0, 0.37, 0, 0.35, 0.50, 0.26, torso);
-    mesh(sphere, skin, 0, 1.0, -0.035, 0.245, 0.275, 0.24, torso);
-    mesh(sphere, hair, 0, 1.09, 0.035, 0.255, 0.21, 0.245, torso);
+    const head = new THREE.Group();
+    head.position.y = 0.82;
+    torso.add(head);
+    mesh(sphere, skin, 0, 0.18, -0.035, 0.245, 0.275, 0.24, head);
+    mesh(sphere, hair, 0, 0.27, 0.035, 0.255, 0.21, 0.245, head);
     if (style % 4 === 1) {
       // A low bun seen from behind.
-      mesh(sphere, hair, 0, 1.04, 0.26, 0.13, 0.13, 0.12, torso);
+      mesh(sphere, hair, 0, 0.22, 0.26, 0.13, 0.13, 0.12, head);
     } else if (style % 4 === 2) {
-      mesh(sphere, hair, 0, 0.94, 0.12, 0.27, 0.28, 0.18, torso);
+      mesh(sphere, hair, 0, 0.12, 0.12, 0.27, 0.28, 0.18, head);
     } else if (style % 4 === 3) {
-      mesh(sphere, coats[(style + 2) % coats.length], 0, 1.19, 0.025, 0.28, 0.17, 0.27, torso);
-      mesh(sphere, coats[(style + 2) % coats.length], 0, 1.10, -0.18, 0.31, 0.045, 0.23, torso);
+      mesh(sphere, coats[(style + 2) % coats.length], 0, 0.37, 0.025, 0.28, 0.17, 0.27, head);
+      mesh(sphere, coats[(style + 2) % coats.length], 0, 0.28, -0.18, 0.31, 0.045, 0.23, head);
     }
     for (const side of [-1, 1]) {
       if (stretched || leaning) {
@@ -89,45 +96,17 @@ export function createParkFinale(random) {
         leg.rotation.y = side * 0.5;
       }
       const hand = leaning ? [side * 0.48, 0.12, 0.42] : [side * 0.30, 0.30, -0.38];
-      limb(avatar, coat, [side * 0.30, 0.94, 0.02], hand, 0.115);
-      mesh(sphere, skin, ...hand, 0.10, 0.11, 0.10, avatar);
+      const local = point => new THREE.Vector3(...point).sub(torso.position)
+        .applyAxisAngle(new THREE.Vector3(1, 0, 0), -torso.rotation.x).toArray();
+      const localHand = local(hand);
+      limb(torso, coat, local([side * 0.30, 0.94, 0.02]), localHand, 0.115);
+      mesh(sphere, skin, ...localHand, 0.10, 0.11, 0.10, torso);
     }
+    visitors.push({ torso, head, restPitch: torso.rotation.x, phase: random() * Math.PI * 2, pace: 0.19 + random() * 0.16 });
   }
   function dalmatian(parent) {
-    const dog = new THREE.Group();
-    dog.position.set(2.20, 0.03, 0.85);
-    dog.rotation.y = -0.12;
-    parent.add(dog);
-    mesh(sphere, dogWhite, 0, 0.66, 0, 0.84, 0.34, 0.31, dog);
-    limb(dog, dogWhite, [0.52, 0.63, 0], [0.72, 0.98, 0], 0.23);
-    mesh(sphere, dogWhite, 0.88, 1.10, 0, 0.29, 0.28, 0.24, dog);
-    mesh(sphere, dogWhite, 1.13, 1.04, 0, 0.29, 0.15, 0.17, dog);
-    mesh(sphere, dogSpots, 1.39, 1.07, 0, 0.065, 0.075, 0.10, dog);
-    mesh(sphere, collar, 0.65, 0.87, 0, 0.24, 0.055, 0.25, dog);
-    for (const side of [-1, 1]) {
-      const ear = mesh(sphere, dogSpots, 0.72, 0.98, side * 0.235, 0.14, 0.27, 0.075, dog);
-      ear.rotation.z = 0.25;
-      mesh(sphere, dogSpots, 1.00, 1.16, side * 0.207, 0.035, 0.045, 0.025, dog);
-      for (const x of [-0.55, 0.53]) {
-        limb(dog, dogWhite, [x, 0.63, side * 0.20], [x + 0.04, 0.12, side * 0.23], 0.085);
-        mesh(sphere, dogWhite, x + 0.10, 0.10, side * 0.23, 0.17, 0.09, 0.11, dog);
-        mesh(sphere, dogSpots, x + 0.035, 0.32, side * 0.29, 0.065, 0.08, 0.025, dog);
-      }
-    }
-    limb(dog, dogWhite, [-0.72, 0.76, 0], [-1.14, 0.93, 0.03], 0.065);
-    limb(dog, dogWhite, [-1.14, 0.93, 0.03], [-1.36, 1.17, 0.04], 0.045);
-    // Small patches sit on the curved white coat, not on a flat decal plane.
-    for (let i = 0; i < 22; i++) {
-      const angle = i * 2.399963, latitude = (random() - 0.5) * 2.4;
-      const x = 0.84 * Math.cos(latitude) * Math.cos(angle);
-      const y = 0.34 * Math.sin(latitude), z = 0.31 * Math.cos(latitude) * Math.sin(angle);
-      const size = 0.05 + random() * 0.04;
-      const patch = mesh(sphere, dogSpots, x * 1.008, 0.66 + y * 1.008, z * 1.008,
-        size, size * (0.8 + random() * 0.45), 0.015, dog);
-      patch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1),
-        new THREE.Vector3(x / (0.84 ** 2), y / (0.34 ** 2), z / (0.31 ** 2)).normalize());
-    }
-    mesh(sphere, dogSpots, 0.88, 1.34, 0.04, 0.08, 0.025, 0.065, dog);
+    dogAnimation = createSeatedDalmatian({mesh, limb, sphere, white: dogWhite, spots: dogSpots, collar, random});
+    parent.add(dogAnimation.group);
   }
   // Loose picnic islands leave broad stretches of grass; no rows or crowd grid.
   const picnics = [
@@ -159,7 +138,7 @@ export function createParkFinale(random) {
       mesh(box, coats[(index + 1) % coats.length], width / 2 - 0.32, 0.25, 0.83, 0.48, 0.48, 0.35, island);
     }
   });
-  // Batch static scenery so the crowd does not add hundreds of draw calls.
+  // Keep the pose hierarchy off-scene; draw both static and moving parts in batches.
   group.updateMatrixWorld(true);
   const batches = new Map();
   group.traverse(object => {
@@ -168,15 +147,49 @@ export function createParkFinale(random) {
     if (!batches.has(key)) batches.set(key, []);
     batches.get(key).push(object);
   });
-  group.clear();
+  const rig = new THREE.Group();
+  rig.add(...group.children);
+  const animatedBatches = [];
   for (const objects of batches.values()) {
     const batch = new THREE.InstancedMesh(objects[0].geometry, objects[0].material, objects.length);
-    objects.forEach((object, index) => batch.setMatrixAt(index, object.matrixWorld));
+    const moving = [];
+    objects.forEach((object, index) => {
+      batch.setMatrixAt(index, object.matrixWorld);
+      for (let parent = object; parent; parent = parent.parent) {
+        if (parent.userData.animated) { moving.push({object, index}); break; }
+      }
+    });
+    if (moving.length) {
+      batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      batch.frustumCulled = false;
+      animatedBatches.push({batch, moving});
+    }
     batch.computeBoundingSphere();
     group.add(batch);
   }
-  function update(reveal) {
+  let wasVisible = false;
+  function update(reveal, time = 0, reducedMotion = false) {
     group.visible = reveal > 0;
+    if (!group.visible && !wasVisible) return;
+    wasVisible = group.visible;
+    const motion = reducedMotion ? 0 : THREE.MathUtils.smoothstep(reveal, 0, 0.65);
+    const clock = reveal > 0 ? time : 0;
+    for (const visitor of visitors) {
+      const {torso, head, phase, pace, restPitch} = visitor;
+      const shift = Math.sin(clock * pace + phase) - Math.sin(phase);
+      const breath = Math.sin(clock * 0.85 + phase) - Math.sin(phase);
+      torso.rotation.x = restPitch + motion * shift * 0.014;
+      torso.rotation.z = motion * (Math.sin(clock * pace * 0.71 + phase * 2) - Math.sin(phase * 2)) * 0.009;
+      torso.position.y = 0.32 + motion * breath * 0.004;
+      head.rotation.y = motion * (Math.sin(clock * pace * 0.62 + phase) - Math.sin(phase)) * 0.055;
+      head.rotation.x = motion * shift * 0.018;
+    }
+    dogAnimation.update(clock, reducedMotion || reveal <= 0);
+    rig.updateMatrixWorld(true);
+    for (const {batch, moving} of animatedBatches) {
+      for (const {object, index} of moving) batch.setMatrixAt(index, object.matrixWorld);
+      batch.instanceMatrix.needsUpdate = true;
+    }
     for (const mat of materials) {
       mat.opacity = reveal;
       mat.depthWrite = reveal > 0.95;
