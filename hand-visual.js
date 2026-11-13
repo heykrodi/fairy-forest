@@ -33,19 +33,19 @@ const CLOSED = [
 // A three-quarter cup: the fingers curl away around the light, while the thumb
 // crosses its near edge. This is a separate pose, not a rotated open palm.
 const ORB = [
-  [-122,194],
-  [-119,163,-115,140,-107,117], [-106,97,-103,82,-102,68],
-  [-111,54,-117,37,-113,25], [-109,13,-99,9,-91,14],
-  [-82,19,-80,24,-78,26], [-77,28,-74,26,-75,21],
-  [-81,5,-78,-10,-69,-18], [-58,-26,-49,-19,-43,-10],
-  [-38,-4,-34,-1,-31,-5], [-29,-8,-29,-13,-30,-18],
-  [-35,-31,-29,-45,-18,-49], [-7,-53,3,-43,8,-32],
-  [12,-24,15,-22,19,-26], [22,-29,22,-33,21,-38],
-  [22,-49,31,-56,40,-49], [52,-39,54,-24,47,-14],
-  [43,-7,36,-8,29,-13], [11,-19,-1,-8,-11,11],
-  [-21,28,-21,37,-14,44], [-10,22,5,10,20,9],
-  [33,7,42,16,38,27], [35,37,21,43,11,53],
-  [-3,67,-7,83,-9,103], [-13,131,-15,163,-13,194],
+  [-145,230],
+  [-124,176,-105,140,-97,111], [-94,92,-87,76,-77,62],
+  [-69,45,-59,21,-43,3], [-37,-4,-29,-5,-25,1],
+  [-21,7,-27,16,-34,25], [-44,39,-50,52,-52,60],
+  [-47,35,-33,6,-14,-20], [-7,-30,2,-33,8,-26],
+  [14,-19,6,-8,-1,2], [-13,20,-20,40,-23,49],
+  [-19,23,-2,-17,19,-48], [27,-60,36,-66,42,-58],
+  [48,-50,40,-38,32,-26], [20,-6,11,19,7,31],
+  [9,7,24,-40,48,-82], [58,-98,69,-105,76,-96],
+  [83,-86,75,-69,68,-56], [54,-32,43,-8,37,10],
+  [29,30,21,43,16,47], [29,26,44,9,59,5],
+  [73,1,83,8,82,19], [81,29,66,38,53,50],
+  [35,69,26,91,20,115], [8,157,-3,197,-9,230],
 ];
 const THUMB_OPEN = [
   [-37,89], [-18,63,-12,49,0,43], [9,27,21,10,30,2],
@@ -58,9 +58,9 @@ const THUMB_CLOSED = [
   [1,49,-2,66,-3,83], [-9,98,-26,103,-37,89],
 ];
 const THUMB_ORB = [
-  [-43,99], [-36,65,-33,47,-14,44], [-10,22,5,10,20,9],
-  [33,7,42,16,38,27], [35,37,21,43,11,53],
-  [-3,67,-7,83,-9,103], [-20,112,-34,112,-43,99],
+  [-25,125], [-15,90,0,65,16,47], [29,26,44,9,59,5],
+  [73,1,83,8,82,19], [81,29,66,38,53,50],
+  [35,69,26,91,20,115], [3,139,-13,141,-25,125],
 ];
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -87,7 +87,7 @@ export function createHandVisual(canvas) {
     const element=document.createElement('canvas');
     return {element,context:element.getContext('2d',{alpha:true})};
   });
-  const local={width:280,height:350,x:170,y:130};
+  const local={width:300,height:420,x:180,y:150};
   let width=1,height=1,ratio=1;
 
   function resize() {
@@ -112,26 +112,26 @@ export function createHandVisual(canvas) {
     const thumb=posePath(THUMB_OPEN,THUMB_CLOSED,grip,THUMB_ORB,orbBlend,roll);
     const pulse=reducedMotion?0.5:0.5+Math.sin(time*1.7)*0.5;
     const skin=ctx.createLinearGradient(-104,160,12,-24);
-    skin.addColorStop(0,'rgba(205,219,226,0.20)');
-    skin.addColorStop(0.58,'rgba(239,233,216,0.35)');
-    skin.addColorStop(1,'rgba(255,238,200,0.44)');
+    skin.addColorStop(0,'rgba(224,197,194,0.10)');
+    skin.addColorStop(0.58,'rgba(242,212,189,0.20)');
+    skin.addColorStop(1,'rgba(255,229,189,0.28)');
     ctx.fillStyle=skin;
-    ctx.shadowColor='rgba(255,216,161,0.12)';
-    ctx.shadowBlur=9;
+    ctx.shadowColor='rgba(255,196,121,0.25)';
+    ctx.shadowBlur=12;
     ctx.fill(body);
     ctx.shadowBlur=0;
-    ctx.strokeStyle='rgba(255,246,225,0.66)';
-    ctx.lineWidth=1.15;
+    ctx.strokeStyle='rgba(255,226,187,0.54)';
+    ctx.lineWidth=1.0;
     ctx.stroke(body);
 
     // One soft light wash gives volume without introducing joint pieces.
     ctx.save();
     ctx.clip(body);
-    const glow=ctx.createRadialGradient(0,5,3,-3,12,118);
-    glow.addColorStop(0,`rgba(255,211,143,${0.09+grip*0.06+pulse*0.012})`);
+    const glow=ctx.createRadialGradient(40,-18,3,26,2,150);
+    glow.addColorStop(0,`rgba(255,206,134,${0.15+grip*0.06+pulse*0.018})`);
     glow.addColorStop(1,'rgba(255,215,158,0)');
     ctx.fillStyle=glow;
-    ctx.fillRect(-160,-125,270,340);
+    ctx.fillRect(-180,-150,300,420);
     ctx.restore();
 
     // Only a confirmed rim hold gets this small slot. Its lower edge will be
@@ -179,17 +179,17 @@ export function createHandVisual(canvas) {
       ctx.save();ctx.clip(body);
       ctx.globalAlpha=orbBlend*orbBlend;
       const nails=[
-        [-98,23,-0.45,-112,-35,-93,24], [-62,-12,-0.32,-79,-71,-59,-2],
-        [-13,-38,0.15,-45,-94,-25,-22], [35,-40,0.48,-1,-85,12,-24],
-        [28,19,0.70,43,10,15,17],
+        [-34,9,0.50,-112,-35,-93,24], [-2,-17,0.50,-79,-71,-59,-2],
+        [33,-49,0.48,-45,-94,-25,-22], [67,-87,0.42,-1,-85,12,-24],
+        [69,14,0.70,43,10,15,17],
       ];
       for(const [x,y,angle,openX,openY,closedX,closedY] of nails){
         const [cx,cy]=cupPoint(x,y);
         ctx.save();
         ctx.translate(mix(mix(openX,closedX,grip),cx,orbBlend),mix(mix(openY,closedY,grip),cy,orbBlend));
         ctx.rotate(angle);
-        ctx.fillStyle='rgba(255,248,230,0.20)';
-        ctx.strokeStyle='rgba(255,248,231,0.18)';
+        ctx.fillStyle='rgba(255,242,216,0.14)';
+        ctx.strokeStyle='rgba(255,242,216,0.10)';
         ctx.lineWidth=0.7;
         ctx.beginPath();ctx.roundRect(-4.6,-3.5,9.2,7,2.8);ctx.fill();ctx.stroke();
         ctx.restore();
@@ -198,8 +198,8 @@ export function createHandVisual(canvas) {
       ctx.lineWidth=0.85;
       ctx.beginPath();
       for(const crease of [
-        [-103,45,-96,36,-84,38,-79,46], [-73,7,-65,-2,-53,2,-47,11],
-        [-25,-19,-17,-28,-6,-24,0,-15], [21,-25,29,-33,40,-28,44,-19],
+        [-62,54,-58,48,-51,45,-47,48], [-34,29,-29,22,-22,20,-17,24],
+        [-6,4,1,-3,8,-5,13,-1], [25,-25,33,-31,40,-32,44,-28],
       ]){
         ctx.moveTo(...cupPoint(crease[0],crease[1]));
         ctx.bezierCurveTo(...cupPoint(crease[2],crease[3]),...cupPoint(crease[4],crease[5]),...cupPoint(crease[6],crease[7]));
@@ -217,7 +217,7 @@ export function createHandVisual(canvas) {
     ctx.stroke();
     ctx.restore();
 
-    const fade=ctx.createLinearGradient(0,118,0,190);
+    const fade=ctx.createLinearGradient(0,mix(118,150,orbBlend),0,mix(190,230,orbBlend));
     fade.addColorStop(0,'rgba(0,0,0,1)');
     fade.addColorStop(0.35,'rgba(0,0,0,0.93)');
     fade.addColorStop(1,'rgba(0,0,0,0)');
@@ -238,11 +238,11 @@ export function createHandVisual(canvas) {
       const opacity=clamp(hand.opacity??1,0,1);
       if(!opacity) return;
       drawHand(layers[index],grip,orbBlend,roll,phase,time,reducedMotion);
-      const scale=clamp(Math.min(width,height)/680,0.64,1.5)*clamp(hand.scale??1,0.45,2);
+      const scale=clamp(Math.min(width,height)/680,0.64,1.5)*clamp(hand.scale??1,0.45,2)*mix(1,1.08,orbBlend);
       context.save();
       context.setTransform(ratio,0,0,ratio,0,0);
       context.translate(hand.contact.x*width,hand.contact.y*height);
-      const cupAngle=(hand.side==='right'?-0.12:0.12)+roll*0.12;
+      const cupAngle=(hand.side==='right'?-0.08:0.08)+roll*0.10;
       context.rotate((Number.isFinite(hand.angle)?hand.angle:0)+cupAngle*orbBlend);
       context.scale((hand.side==='right'?-1:1)*scale,scale);
       context.globalAlpha=opacity;

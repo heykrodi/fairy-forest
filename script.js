@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { startExperience } from './experience.js?v=gathering-choice-1';
+import { startExperience } from './experience.js?v=warmth-design-1';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js?v=park-2';
 import { createParkFinale } from './park-finale.js?v=park-life-1';
@@ -165,7 +165,7 @@ function createScene() {
         color += vec3(0.13,0.045,0.012) * ember * (0.60+0.4*facing) * uWarmth;
         float edgeFold=1.0-smoothstep(0.0,0.017,h);
         color *= 1.0-edgeFold*0.22;
-        vec3 unlit=vec3(0.052,0.043,0.042)*centerLight*shading*(0.92+grain*0.08+wrinkles*0.04);
+        vec3 unlit=vec3(0.086,0.064,0.057)*centerLight*shading*(0.92+grain*0.08+wrinkles*0.04);
         unlit*=1.0-seam*0.14;
         color=mix(unlit,color,smoothstep(h*0.33,h*0.33+0.60,uIgnition));
         gl_FragColor=vec4(color,1.0);
@@ -272,50 +272,46 @@ function createScene() {
   scene.add(park.group);
   const finaleOrigin = new THREE.Vector3();
 
-  // A clear little sphere gathers fine currents of light between the palms.
+  // The open arcs invite both hands into one shared pocket of warm air.
   const orb = new THREE.Group();
   scene.add(orb);
-  const orbMaterial = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false,
-    uniforms: { uEnergy: { value: 0 }, uOpacity: { value: 1 } },
-    vertexShader: `varying vec3 vNormal;
-      void main(){vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader: `varying vec3 vNormal; uniform float uEnergy,uOpacity;
-      void main(){
-        float edge=pow(1.0-abs(normalize(vNormal).z),3.0);
-        vec3 color=mix(vec3(0.48,0.69,0.76),vec3(1.0,0.64,0.27),uEnergy);
-        gl_FragColor=vec4(color,(0.025+edge*0.30)*uOpacity);
-      }`,
-  });
-  const orbShell = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 24), orbMaterial);
-  orb.add(orbShell);
-  orbShell.visible = false;
+  const warmthRadius = 0.76;
   const emberCharacter = createEmberCharacter();
   orb.add(emberCharacter.group);
   const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-  orbGlow.scale.set(1.55, 1.55, 1);
+  orbGlow.scale.set(3.5, 3.5, 1);
   orb.add(orbGlow);
   const currents = new THREE.Group();
-  currents.position.z = -0.18;
+  currents.position.z = -0.06;
   orb.add(currents);
-  currents.visible = false;
   const currentMaterials = [];
-  for (let strand = 0; strand < 3; strand++) {
+  for (let strand = 0; strand < 2; strand++) {
     const points = [];
     for (let i = 0; i <= 72; i++) {
       const t = i / 72;
-      const angle = t * Math.PI * 3.3 + strand * 2.1;
-      const radius = 0.045 + t * 0.235;
-      points.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.72, Math.sin(t * Math.PI) * 0.095 - 0.045));
+      const angle = t * Math.PI * 0.76 + strand * Math.PI + 0.32;
+      const radius = warmthRadius + Math.sin(t * Math.PI) * 0.018;
+      points.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 0));
     }
-    const material = new THREE.MeshBasicMaterial({ color: '#e9d8aa', transparent: true, opacity: 0.2, depthWrite: false });
-    const line = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 90, 0.0035, 4, false), material);
-    line.rotation.y = (strand - 1) * 0.6;
+    const material = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uOpacity: { value: 0.45 }, uEnergy: { value: 0 } },
+      vertexShader: `varying vec2 vUv;
+        void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader: `varying vec2 vUv; uniform float uOpacity,uEnergy;
+        void main(){
+          float taper=pow(sin(vUv.x*3.14159265),1.4);
+          vec3 color=mix(vec3(1.0,0.55,0.19),vec3(1.6,1.04,0.40),uEnergy);
+          gl_FragColor=vec4(color,taper*uOpacity);
+        }`,
+    });
+    const line = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 72, 0.004, 6, false), material);
     currents.add(line);
     currentMaterials.push(material);
   }
-  const sparkPositions = new Float32Array(42 * 3);
-  const sparkAlphas = new Float32Array(42);
+  const sparkCount = 112;
+  const sparkPositions = new Float32Array(sparkCount * 3);
+  const sparkAlphas = new Float32Array(sparkCount);
   const sparkGeometry = new THREE.BufferGeometry();
   sparkGeometry.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
   sparkGeometry.setAttribute('aAlpha', new THREE.BufferAttribute(sparkAlphas, 1));
@@ -323,15 +319,14 @@ function createScene() {
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: { uRatio: { value: renderer.getPixelRatio() }, uEnergy: { value: 0 } },
     vertexShader: `attribute float aAlpha; varying float vAlpha; uniform float uRatio;
-      void main(){vAlpha=aAlpha;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=(2.0+aAlpha*1.7)*uRatio;}`,
+      void main(){vAlpha=aAlpha;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=(1.3+aAlpha*2.0)*uRatio;}`,
     fragmentShader: `varying float vAlpha; uniform float uEnergy;
-      void main(){float d=length(gl_PointCoord-0.5)*2.0;vec3 color=mix(vec3(0.75,0.88,1.0),vec3(1.0,0.70,0.29),uEnergy);
+      void main(){float d=length(gl_PointCoord-0.5)*2.0;vec3 color=mix(vec3(1.0,0.61,0.29),vec3(1.4,0.91,0.43),uEnergy);
       gl_FragColor=vec4(color,(1.0-smoothstep(0.0,1.0,d))*vAlpha);}`,
   });
   const sparks = new THREE.Points(sparkGeometry, sparkMaterial);
   sparks.frustumCulled = false;
   orb.add(sparks);
-  sparks.visible = false;
 
   const ray = new THREE.Raycaster();
   const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
@@ -434,8 +429,8 @@ function createScene() {
     const phaseProgress = THREE.MathUtils.clamp(ritualView.phaseProgress || 0, 0, 1);
     const energy = phase === 'gathering' ? THREE.MathUtils.clamp(ritualView.energy || 0, 0, 1) : 1;
     const motion = THREE.MathUtils.clamp(ritualView.motion || 0, 0, 1);
-    const orbX = narrow ? 0.54 : 0.58;
-    worldFromScreen(orbX, 0.68, 0, orbHome);
+    const orbX = 0.5;
+    worldFromScreen(orbX, narrow ? 0.67 : 0.65, 0, orbHome);
 
     if (ritualView.active !== wasActive || (phase === 'gathering' && lastPhase !== 'gathering')) {
       approach = null;
@@ -475,18 +470,22 @@ function createScene() {
       lantern.rotation.x = -0.035;
       lantern.rotation.y = -0.08;
       lantern.rotation.z = THREE.MathUtils.damp(lantern.rotation.z, 0, 10, dt);
-      lantern.scale.setScalar(narrow ? 1 : 1.10);
       if (phase === 'gathering') {
-        const target = screenToRim(narrow ? 0.76 : 0.79, narrow ? 0.43 : 0.41, -5);
+        lantern.scale.setScalar(narrow ? 0.62 : 0.82);
+        const target = screenToRim(narrow ? 0.83 : 0.84, 0.40, -5);
         if (!initialized) lantern.position.copy(target);
         else springTo(target, dt);
       } else {
-        const target = screenToRim(orbX, 0.635);
         if (phase === 'approaching') {
-          if (!approach) approach = { position: lantern.position.clone() };
+          if (!approach) approach = { position: lantern.position.clone(), scale: lantern.scale.x };
           const eased = THREE.MathUtils.smoothstep(phaseProgress, 0, 1);
+          lantern.scale.setScalar(THREE.MathUtils.lerp(approach.scale, narrow ? 1 : 1.10, eased));
+          const target = screenToRim(orbX, 0.605);
           lantern.position.lerpVectors(approach.position, target, eased);
-        } else lantern.position.copy(target);
+        } else {
+          lantern.scale.setScalar(narrow ? 1 : 1.10);
+          lantern.position.copy(screenToRim(orbX, 0.605));
+        }
         velocity.set(0, 0, 0);
       }
       initialized = true;
@@ -548,25 +547,22 @@ function createScene() {
       emberCharacter.group.scale.setScalar((0.015 + THREE.MathUtils.smoothstep(energy, 0, 1) * 0.225) * transferScale);
       emberCharacter.group.quaternion.copy(camera.quaternion);
       emberCharacter.update({time:elapsed,energy,opacity:THREE.MathUtils.smoothstep(energy,0.04,0.32)*fading,motion,reducedMotion});
-      orbMaterial.uniforms.uEnergy.value = energy;
-      orbMaterial.uniforms.uOpacity.value = (1 - born * 0.97) * fading;
-      orbShell.scale.setScalar(1 - born * 0.25);
-      orbGlow.material.opacity = THREE.MathUtils.smoothstep(energy, 0.04, 1) * 0.65 * fading;
-      currents.rotation.z = reducedMotion ? 0 : orbTime + shownTurn * 0.8;
-      currents.rotation.y = reducedMotion ? 0 : Math.sin(orbTime * 0.5) * 0.22;
-      currentMaterials.forEach((material, index) => {
-        material.opacity = (0.18 + energy * 0.35) * (1 - born * 0.98) * fading;
-        material.color.setRGB(0.74 + energy * 0.24, 0.79 - energy * 0.18, 0.80 - energy * 0.49);
+      orbGlow.material.opacity = (0.32 + energy * 0.76) * fading;
+      currents.visible = phase === 'gathering';
+      currents.rotation.z = reducedMotion ? 0 : orbTime * 0.30 + shownTurn * 0.18;
+      currentMaterials.forEach(material => {
+        material.uniforms.uOpacity.value = (0.32 + energy * 0.32 + motion * 0.10) * (1 - born * 0.45);
+        material.uniforms.uEnergy.value = energy;
       });
       sparkMaterial.uniforms.uEnergy.value = energy;
-      for (let i = 0; i < 42; i++) {
-        const t = (i / 42 + orbTime * 0.20) % 1;
-        const angle = i * 2.39996 + orbTime * 1.4 + shownTurn * 0.7;
-        const radius = (0.11 + (1 - t) * 0.33) * (1 - born * 0.57);
+      for (let i = 0; i < sparkCount; i++) {
+        const t = (i / sparkCount + orbTime * 0.14) % 1;
+        const angle = i * 2.39996 + orbTime * 0.55 + shownTurn * 0.24;
+        const radius = (0.025 + (1 - t) * warmthRadius) * (1 - born * 0.56);
         sparkPositions[i * 3] = Math.cos(angle) * radius;
-        sparkPositions[i * 3 + 1] = Math.sin(angle) * radius * 0.80;
-        sparkPositions[i * 3 + 2] = Math.sin(i * 1.9 + orbTime) * radius * 0.45;
-        sparkAlphas[i] = Math.sin(t * Math.PI) * (0.16 + energy * 0.62) * (1 - born * 0.55) * fading;
+        sparkPositions[i * 3 + 1] = Math.sin(angle) * radius;
+        sparkPositions[i * 3 + 2] = Math.sin(i * 1.9 + orbTime) * radius * 0.24;
+        sparkAlphas[i] = Math.sin(t * Math.PI) * (0.22 + energy * 0.56) * (1 - born * 0.45) * fading;
       }
       sparkGeometry.attributes.position.needsUpdate = true;
       sparkGeometry.attributes.aAlpha.needsUpdate = true;
@@ -602,11 +598,14 @@ function createScene() {
         return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 };
       };
       const born = THREE.MathUtils.smoothstep(ritualView.energy || 0, 0.35, 0.90);
-      const handSpread = 0.38 + born * 0.16;
-      const handHeight = -0.17 - born * 0.10;
+      const handSpread = 1.18 + born * 0.06;
+      const handHeight = -0.10 - born * 0.08;
+      const orbCenter = screen(orb.position);
+      const orbEdge = screen(orb.position.clone().add(new THREE.Vector3(warmthRadius, warmthRadius, 0)));
       return {
         left, right, center: { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 },
-        orb: screen(orb.position),
+        orb: orbCenter,
+        orbRadius: { x: Math.abs(orbEdge.x - orbCenter.x), y: Math.abs(orbEdge.y - orbCenter.y) },
         orbLeft: screen(orbHome.clone().add(new THREE.Vector3(-handSpread, handHeight, 0))),
         orbRight: screen(orbHome.clone().add(new THREE.Vector3(handSpread, handHeight, 0))),
         burner: screen(burnerWorld), reducedMotion: motionPreference.matches,
