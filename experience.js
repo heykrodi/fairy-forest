@@ -307,6 +307,10 @@ export function startExperience(view) {
     const praying=currentPhase==='gathering'&&orb.state.praying;
     const flight=['released','complete'].includes(state.phase);
     const elapsed=state.progress*FLIGHT_SECONDS;
+    const withdrawal=clamp((elapsed-0.2)/1.6,0,1);
+    const handTravel=layout.reducedMotion?0:withdrawal*withdrawal*(3-2*withdrawal);
+    const fading=clamp((elapsed-0.35)/2.05,0,1);
+    const handOpacity=flight?0.9*(1-fading*fading*(3-2*fading)):0.9;
     const hands=[];
     for(const side of sides) {
       const input=inputs[side];
@@ -324,11 +328,12 @@ export function startExperience(view) {
         };
         contact={x:mix(contact.x,orbContact.x,orbBlend),y:mix(contact.y,orbContact.y,orbBlend)};
       }
-      if(flight&&releaseAnchors) contact={x:releaseAnchors[side].x+(side==='left'?-1:1)*0.025*Math.min(1,elapsed),y:releaseAnchors[side].y+Math.min(0.11,elapsed*0.07)};
+      // Keep the opening hands near the rim briefly, then let them relax away.
+      if(flight&&releaseAnchors) contact={x:releaseAnchors[side].x+(side==='left'?-1:1)*0.025*handTravel,y:releaseAnchors[side].y+0.11*handTravel};
       const previous=drawn.get(side);
       const blend=1-Math.exp(-dt*14);
       const gripTarget=prelude()?0.3:flight?0:held||input.grip?1:input.open?0:(input.amount||0);
-      const item={side,contact:held||!previous?contact:{x:mix(previous.contact.x,contact.x,blend),y:mix(previous.contact.y,contact.y,blend)},grip:mix(previous?.grip||0,gripTarget,blend),opacity:flight?clamp(1-elapsed/2.4,0,1):0.9,pose:orbBlend>0?'orb':'rim',orbBlend:mix(previous?.orbBlend??orbBlend,orbBlend,blend),angle:0,roll:mix(previous?.roll||0,input.displayRoll||0,blend)};
+      const item={side,contact:held||!previous?contact:{x:mix(previous.contact.x,contact.x,blend),y:mix(previous.contact.y,contact.y,blend)},grip:mix(previous?.grip||0,gripTarget,blend),opacity:handOpacity,pose:orbBlend>0?'orb':'rim',orbBlend:mix(previous?.orbBlend??orbBlend,orbBlend,blend),angle:0,roll:mix(previous?.roll||0,input.displayRoll||0,blend)};
       drawn.set(side,item);hands.push(item);
     }
     visual.render({hands,phase:currentPhase,time,reducedMotion:layout.reducedMotion});

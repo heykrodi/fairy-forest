@@ -3,8 +3,10 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { startExperience } from './experience.js?v=approach-1';
+import { startExperience } from './experience.js?v=buoyancy-1';
 import { sampleApproach } from './approach-motion.js';
+import { sampleReleaseMotion } from './release-motion.js';
+import { FLIGHT_SECONDS } from './release-state.js';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js?v=park-2';
 import { createParkFinale } from './park-finale.js?v=park-life-1';
@@ -131,13 +133,13 @@ function createScene() {
 
   const paperMaterial = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
-    uniforms: { uWarmth: { value: 1 }, uIgnition: { value: 1 }, uBreath: { value: 0 }, uSway: { value: 0 } },
+    uniforms: { uWarmth: { value: 1 }, uIgnition: { value: 1 }, uBreath: { value: 0 }, uSway: { value: 0 }, uLift: { value: 0 } },
     vertexShader: `varying vec3 vLocal; varying vec3 vNormal; varying vec2 vUv;
-      uniform float uBreath, uSway;
+      uniform float uBreath, uSway, uLift;
       void main() {
         vec3 p=position; float h=clamp((p.y+1.20)/2.67,0.0,1.0);
         p.xz*=1.0+uBreath*sin(h*3.14159265);
-        p.y+=uBreath*(p.y+1.20)*0.5; p.x+=uSway*h*h;
+        p.y+=uBreath*(p.y+1.20)*0.5+uLift*h*h; p.x+=uSway*h*h;
         vLocal=p; vNormal=normalize(normalMatrix*normal); vUv=uv;
         gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
     fragmentShader: `
@@ -369,6 +371,8 @@ function createScene() {
   let orbTime = 0;
   let shownTurn = 0;
   let wasActive = false;
+  let buoyancy = 0;
+  let paperDrift = 0;
 
   function resize() {
     const width = window.innerWidth, height = window.innerHeight;
@@ -450,12 +454,13 @@ function createScene() {
     if (ritualView.active !== wasActive || (phase === 'gathering' && lastPhase !== 'gathering')) {
       approach = null;
       orbTime = shownTurn = 0;
+      buoyancy = paperDrift = 0;
     }
     if (!ritualView.active || phase === 'gathering') approach = null;
 
     if (flying && !flight) {
       // Capture the exact held pose before starting any flight movement.
-      flight = { position: lantern.position.clone(), rotation: lantern.rotation.clone(), scale: lantern.scale.clone(), ending: 0 };
+      flight = { position: lantern.position.clone(), rotation: lantern.rotation.clone(), scale: lantern.scale.clone(), velocity: velocity.clone(), pull: buoyancy, drift: paperDrift, ending: 0 };
       velocity.set(0, 0, 0);
     } else if (!flying && flight) {
       // A deliberate restart begins again within reach, never at the far endpoint.
@@ -469,10 +474,11 @@ function createScene() {
       const p = flightProgress;
       if (phase === 'complete') flight.ending += dt;
       const afterglow = reducedMotion ? 0 : 1 - Math.exp(-flight.ending * 0.16);
+      const departure = sampleReleaseMotion(p, reducedMotion, flight.velocity);
       lantern.position.copy(flight.position).add(new THREE.Vector3(
-        reducedMotion ? 0 : 0.9 * p + Math.sin(p * Math.PI) * 0.18,
-        2.5 * p + (reducedMotion ? 15 : 25.5) * p * p + afterglow * 1.3,
-        -8 * p - 26 * p * p - afterglow * 2.2,
+        departure.x,
+        departure.y + afterglow * 1.3,
+        departure.z - afterglow * 2.2,
       ));
       lantern.scale.copy(flight.scale);
       lantern.rotation.copy(flight.rotation);
@@ -542,8 +548,23 @@ function createScene() {
 
     // The soft body breathes above the rigid rim while the two fingertips stay put.
     const ignition = !prelude ? 1 : phase === 'igniting' ? THREE.MathUtils.smoothstep(phaseProgress, 0.58, 1) : 0;
+    const restrained = ritualView.active && ['holding', 'raised'].includes(phase);
+    if (reducedMotion) buoyancy = paperDrift = 0;
+    else if (flying && flight) {
+      // Keep the stretched paper on the release frame, then let its tension settle.
+      const tension = 1 - THREE.MathUtils.smootherstep(flightProgress * FLIGHT_SECONDS, 0, 1.2);
+      buoyancy = flight.pull * tension;
+      paperDrift = flight.drift * tension;
+    } else if (!restrained || !ritualView.handLost) {
+      // Grip flags open before release is confirmed; the holding phase keeps the pull alive.
+      const pull = restrained ? 0.085 + (ritualView.lift || 0) * 0.025 + Math.sin(elapsed * 1.8) * 0.012 : 0;
+      const drift = restrained ? -(ritualView.tilt || 0) * 0.24 + Math.sin(elapsed * 1.25) * 0.022 : 0;
+      buoyancy = THREE.MathUtils.damp(buoyancy, pull, 2.4, dt);
+      paperDrift = THREE.MathUtils.damp(paperDrift, drift, 2.8, dt);
+    }
+    paperMaterial.uniforms.uLift.value = buoyancy;
     paperMaterial.uniforms.uBreath.value = reducedMotion ? 0 : Math.sin(elapsed * 1.55) * 0.005;
-    paperMaterial.uniforms.uSway.value = reducedMotion ? 0 : Math.sin(elapsed * 0.75) * 0.014;
+    paperMaterial.uniforms.uSway.value = reducedMotion ? 0 : Math.sin(elapsed * 0.75) * 0.014 + paperDrift;
     paperMaterial.uniforms.uWarmth.value = 1 + (reducedMotion ? 0 : Math.sin(elapsed * 1.35) * 0.018);
     paperMaterial.uniforms.uIgnition.value = ignition;
     flame.visible = ignition > 0;
@@ -551,7 +572,7 @@ function createScene() {
     flame.scale.y *= reducedMotion ? 1 : 1 + Math.sin(elapsed * 4.1) * 0.035;
     emberLight.intensity = (1.4 + (reducedMotion ? 0 : Math.sin(elapsed * 2.1) * 0.04)) * ignition;
     bowlMaterial.emissiveIntensity = ignition * 0.18;
-    glow.material.opacity = (flying ? 0.70 : 0.55) * ignition;
+    glow.material.opacity = THREE.MathUtils.lerp(0.55, 0.70, flying ? THREE.MathUtils.smootherstep(flightProgress * FLIGHT_SECONDS, 0, 1) : 0) * ignition;
     cueMaterials.forEach((material, index) => {
       const held = index === 0 ? ritualView.leftHeld : ritualView.rightHeld;
       material.opacity = ritualView.active && !flying && !prelude ? (held ? 0.75 : 0.34 + (reducedMotion ? 0 : Math.sin(elapsed * 1.8) * 0.055)) : 0;
