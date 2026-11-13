@@ -278,7 +278,20 @@ function createScene() {
   const warmthRadius = 0.76;
   const emberCharacter = createEmberCharacter();
   orb.add(emberCharacter.group);
-  const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  const warmthCanvas = document.createElement('canvas');
+  warmthCanvas.width = warmthCanvas.height = 256;
+  const warmthContext = warmthCanvas.getContext('2d');
+  const warmthGradient = warmthContext.createRadialGradient(128, 128, 0, 128, 128, 128);
+  warmthGradient.addColorStop(0, 'rgba(255,207,124,0.62)');
+  warmthGradient.addColorStop(0.08, 'rgba(255,192,105,0.32)');
+  warmthGradient.addColorStop(0.26, 'rgba(255,167,86,0.10)');
+  warmthGradient.addColorStop(0.62, 'rgba(255,139,73,0.025)');
+  warmthGradient.addColorStop(1, 'rgba(255,128,64,0)');
+  warmthContext.fillStyle = warmthGradient;
+  warmthContext.fillRect(0, 0, 256, 256);
+  const warmthTexture = new THREE.CanvasTexture(warmthCanvas);
+  warmthTexture.colorSpace = THREE.SRGBColorSpace;
+  const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: warmthTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
   orbGlow.scale.set(3.5, 3.5, 1);
   orb.add(orbGlow);
   const currents = new THREE.Group();
@@ -471,8 +484,8 @@ function createScene() {
       lantern.rotation.y = -0.08;
       lantern.rotation.z = THREE.MathUtils.damp(lantern.rotation.z, 0, 10, dt);
       if (phase === 'gathering') {
-        lantern.scale.setScalar(narrow ? 0.62 : 0.82);
-        const target = screenToRim(narrow ? 0.83 : 0.84, 0.40, -5);
+        lantern.scale.setScalar(narrow ? 0.43 : 0.82);
+        const target = screenToRim(narrow ? 0.87 : 0.84, narrow ? 0.49 : 0.40, -5);
         if (!initialized) lantern.position.copy(target);
         else springTo(target, dt);
       } else {
@@ -562,7 +575,7 @@ function createScene() {
         sparkPositions[i * 3] = Math.cos(angle) * radius;
         sparkPositions[i * 3 + 1] = Math.sin(angle) * radius;
         sparkPositions[i * 3 + 2] = Math.sin(i * 1.9 + orbTime) * radius * 0.24;
-        sparkAlphas[i] = Math.sin(t * Math.PI) * (0.22 + energy * 0.56) * (1 - born * 0.45) * fading;
+        sparkAlphas[i] = Math.sin(t * Math.PI) * (0.40 + energy * 0.38) * (1 - born * 0.45) * fading;
       }
       sparkGeometry.attributes.position.needsUpdate = true;
       sparkGeometry.attributes.aAlpha.needsUpdate = true;
