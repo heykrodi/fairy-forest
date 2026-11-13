@@ -503,7 +503,7 @@ function createScene() {
           );
           lantern.scale.setScalar(THREE.MathUtils.lerp(approach.scale, narrow ? 1 : 1.10, arrival.travel));
           // Animate the actual open rim: scaling and banking must not pull it off its path.
-          worldFromScreen(orbX, 0.605, 0, targetPosition);
+          worldFromScreen(orbX, 0.63, 0, targetPosition);
           desiredRim.lerpVectors(approach.rim, targetPosition, arrival.travel);
           desiredRim.y += arrival.lift;
           anchorOffset.copy(rimCenter).multiply(lantern.scale).applyQuaternion(lantern.quaternion);
@@ -515,7 +515,7 @@ function createScene() {
           const handover = THREE.MathUtils.smootherstep(phaseProgress, 0.68, 1);
           lantern.position.copy(screenToRim(
             THREE.MathUtils.lerp(orbX, narrow ? 0.54 : 0.58, handover),
-            THREE.MathUtils.lerp(0.605, 0.71, handover),
+            THREE.MathUtils.lerp(0.63, 0.71, handover),
           ));
         }
         velocity.set(0, 0, 0);
