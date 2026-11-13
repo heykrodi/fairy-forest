@@ -511,12 +511,8 @@ function createScene() {
         } else {
           lantern.rotation.set(-0.035, -0.08, 0);
           lantern.scale.setScalar(narrow ? 1 : 1.10);
-          // Once the ember has entered the bowl, offer the rim to the waiting hands.
-          const handover = THREE.MathUtils.smootherstep(phaseProgress, 0.68, 1);
-          lantern.position.copy(screenToRim(
-            THREE.MathUtils.lerp(orbX, narrow ? 0.54 : 0.58, handover),
-            THREE.MathUtils.lerp(0.63, 0.71, handover),
-          ));
+          // Let the light finish spreading before the lantern moves toward the hands.
+          lantern.position.copy(screenToRim(orbX, 0.63));
         }
         velocity.set(0, 0, 0);
       }
