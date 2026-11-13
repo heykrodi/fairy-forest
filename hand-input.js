@@ -119,7 +119,7 @@ export function createHandInput({ onFrame = () => {}, onStatus = () => {} } = {}
         }
       };
       document.addEventListener('visibilitychange', session.visibility);
-      onStatus({ state: 'ready', message: '카메라가 준비됐어요. 두 손을 작은 그릇처럼 모아보세요.' });
+      onStatus({ state: 'ready', message: '카메라가 준비됐어요. 두 손으로 구슬을 굴리거나 기도하듯 모아주세요.' });
       if (document.hidden) session.visibility();
       else session.raf = requestAnimationFrame(tick);
       return true;

@@ -7,7 +7,7 @@
     <meta name="description" content="두 손 사이에서 작은 불씨를 깨우고, 따뜻해진 풍등에 새해의 소원을 담아 밤하늘로 놓아주세요.">
     <title>소원을 담은 밤</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./style.css?v=pretendard-1">
+    <link rel="stylesheet" href="./style.css?v=gathering-choice-1">
     <script type="importmap">
       {
         "imports": {
@@ -53,9 +53,30 @@
 
     <section id="instruction" class="instruction" aria-live="polite" aria-atomic="true" aria-label="현재 할 동작">
       <p class="eyebrow">당신의 소원이 하늘에 닿는 시간</p>
-      <h2 id="instruction-title">두 손 사이에, 작은 온기.</h2>
-      <p id="instruction-detail">둥근 구슬을 감싸듯, 두 손을 번갈아 천천히 움직여보세요.</p>
+      <h2 id="instruction-title">당신의 소원으로 불꽃을 깨워요.</h2>
+      <p id="instruction-detail">둘 중 편한 한 가지로 기원의 불꽃을 만들어보세요.</p>
       <progress id="lift-progress" max="1" value="0" aria-label="풍등을 들어 올린 높이" hidden></progress>
+    </section>
+
+    <section id="gather-options" class="gather-options" aria-label="불꽃을 만드는 두 가지 방법">
+      <article id="rolling-card" class="gather-card" data-engaged="false" aria-labelledby="rolling-title">
+        <h3 id="rolling-title">수정구슬 굴리기</h3>
+        <p>둥근 구슬을 감싸듯 <br>두 손을 번갈아 천천히 <br>굴려주세요.</p>
+        <div class="gather-feedback">
+          <span id="rolling-status">움직임을 기다려요</span>
+          <progress id="rolling-progress" max="1" value="0" aria-label="구슬을 굴려 모은 온기"></progress>
+        </div>
+        <button id="mouse-roll" class="primary-button" type="button" aria-pressed="false" hidden>굴리기 체험</button>
+      </article>
+      <article id="prayer-card" class="gather-card" data-engaged="false" aria-labelledby="prayer-title">
+        <h3 id="prayer-title">두 손 모아 소원 빌기</h3>
+        <p>손끝을 위로, 두 손을 가까이. <br>카메라에 두 손이 보이도록 <br>3초간 소원을 빌어주세요.</p>
+        <div class="gather-feedback">
+          <span id="prayer-status">두 손을 기다려요</span>
+          <progress id="prayer-progress" max="1" value="0" aria-label="두 손을 모아 소원 비는 시간"></progress>
+        </div>
+        <button id="mouse-pray" class="primary-button" type="button" aria-pressed="false" hidden>기도하기 체험</button>
+      </article>
     </section>
 
     <div class="active-controls">
@@ -80,6 +101,6 @@
         window.location.reload();
       });
     </script>
-    <script type="module" src="./script.js?v=park-life-1"></script>
+    <script type="module" src="./script.js?v=gathering-choice-1"></script>
   </body>
 </html>

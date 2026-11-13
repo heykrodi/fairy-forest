@@ -2,14 +2,15 @@ import { createHandInput } from './hand-input.js';
 import { createHandVisual } from './hand-visual.js';
 import { createReleaseState, FLIGHT_SECONDS } from './release-state.js';
 import { classifyHandGrip } from './hand-grip.js';
-import { createOrbState } from './orb-state.js';
+import { classifyPrayerHand } from './hand-prayer.js';
+import { createOrbState } from './orb-state.js?v=gathering-choice-1';
 import { createSoundscape } from './soundscape.js';
 
 export function startExperience(view) {
   const ritual=createReleaseState();
   const orb=createOrbState();
   const visual=createHandVisual(document.getElementById('hand-light'));
-  const ids=['camera-start','mouse-start','stop-camera','restart','sound-toggle','mouse-action','instruction-title','instruction-detail','tracking-status','lift-progress','status','input-note'];
+  const ids=['camera-start','mouse-start','stop-camera','restart','sound-toggle','mouse-action','instruction-title','instruction-detail','tracking-status','lift-progress','status','input-note','gather-options','rolling-card','prayer-card','rolling-progress','prayer-progress','rolling-status','prayer-status','mouse-roll','mouse-pray'];
   const ui=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));
   let soundStatus={state:'idle',muted:false};
   const sound=createSoundscape({onStatus(status){
@@ -27,7 +28,7 @@ export function startExperience(view) {
   let lastFrame=-Infinity,slotIds={left:null,right:null},inputs={},baseline=null;
   let offset={x:0,y:0},tilt=0,releaseAnchors=null,dragId=null,dragStart=null;
   const grips=new Map(),drawn=new Map(),rollOrigins=new Map();
-  const mouse={grip:false,open:true,y:0.65,targetY:0.65,x:0.5,orbit:0,targetOrbit:0,rolling:false};
+  const mouse={grip:false,open:true,y:0.65,targetY:0.65,x:0.5,orbit:0,targetOrbit:0,rolling:false,praying:false};
   const phase=()=>orb.state.phase==='ready'?ritual.state.phase:orb.state.phase;
   const prelude=()=>orb.state.phase!=='ready';
   const angleDifference=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
@@ -51,7 +52,7 @@ export function startExperience(view) {
     inputs={};baseline=null;offset={x:0,y:0};tilt=0;releaseAnchors=null;
     dragId=null;dragStart=null;lastFrame=-Infinity;
     mouse.grip=false;mouse.open=true;mouse.y=mouse.targetY=0.65;mouse.x=0.5;
-    mouse.orbit=mouse.targetOrbit=0;mouse.rolling=false;
+    mouse.orbit=mouse.targetOrbit=0;mouse.rolling=false;mouse.praying=false;
     grips.clear();drawn.clear();rollOrigins.clear();
     ui.status.hidden=true;
   }
@@ -90,8 +91,16 @@ export function startExperience(view) {
   addEventListener('resize',()=>{visual.resize();drawn.clear();});
 
   // Mouse and keyboard share the same hold / lift / deliberate release rules.
+  ui['mouse-roll'].addEventListener('click',()=>{
+    if(mode!=='mouse'||phase()!=='gathering') return;
+    mouse.rolling=!mouse.rolling;mouse.praying=false;
+  });
+  ui['mouse-pray'].addEventListener('click',()=>{
+    if(mode!=='mouse'||phase()!=='gathering') return;
+    mouse.praying=!mouse.praying;mouse.rolling=false;
+    mouse.targetOrbit=mouse.orbit;
+  });
   ui['mouse-action'].addEventListener('click',()=>{
-    if(phase()==='gathering') {mouse.rolling=!mouse.rolling;return;}
     if(prelude()) return;
     const state=ritual.state;
     if(state.phase==='waiting'||state.needsRegrip) {
@@ -105,7 +114,7 @@ export function startExperience(view) {
   surface.addEventListener('pointerdown',event=>{
     if(mode!=='mouse') return;
     if(phase()==='gathering') {
-      mouse.rolling=false;
+      mouse.rolling=false;mouse.praying=false;
       dragId=event.pointerId;dragStart={x:event.clientX,y:event.clientY,orb:true};
       surface.setPointerCapture(event.pointerId);event.preventDefault();return;
     }
@@ -159,9 +168,10 @@ export function startExperience(view) {
       }
     }
     const sorted=[...fresh].sort((a,b)=>a.palm.x-b.palm.x);
-    if(sorted.length===2&&(ritual.state.phase==='waiting'||sides.some(side=>!fresh.some(hand=>hand.id===slotIds[side])))) {
+    // Close prayer palms can cross on screen without changing hand identity.
+    if(sorted.length===2&&((!prelude()&&ritual.state.phase==='waiting')||sides.some(side=>!fresh.some(hand=>hand.id===slotIds[side])))) {
       slotIds={left:sorted[0].id,right:sorted[1].id};
-    } else if(sorted.length===1&&ritual.state.phase==='waiting') {
+    } else if(sorted.length===1&&ritual.state.phase==='waiting'&&!sides.some(side=>slotIds[side]===sorted[0].id)) {
       const side=sorted[0].palm.x<0.5?'left':'right';slotIds[side]=sorted[0].id;
       if(slotIds[side==='left'?'right':'left']===sorted[0].id) slotIds[side==='left'?'right':'left']=null;
     }
@@ -175,7 +185,7 @@ export function startExperience(view) {
       const displayRoll=clamp(angleDifference(roll,rollOrigins.get(hand.id))*1.6,-1,1);
       const contact=freeContact(side,hand,layout);
       const near=Math.hypot((contact.x-layout[side].x)*innerWidth,(contact.y-layout[side].y)*innerHeight)<Math.max(100,innerHeight*0.18);
-      return [side,{id:hand.id,tracked:true,grip:pose.grip,open:pose.open&&pose.openFrames>=2,amount:pose.amount,y:hand.palm.y,x:hand.palm.x,roll,displayRoll,near,contact}];
+      return [side,{id:hand.id,tracked:true,grip:pose.grip,open:pose.open&&pose.openFrames>=2,amount:pose.amount,y:hand.palm.y,x:hand.palm.x,roll,displayRoll,near,contact,palmScale:hand.palmScale,prayerPose:classifyPrayerHand(hand,frame.sourceAspect)}];
     }));
   }
   function updateUI() {
@@ -184,7 +194,7 @@ export function startExperience(view) {
     document.body.dataset.tracking=state.handLost?'lost':'ready';
     const lost=state.needsRegrip&&['holding','raised'].includes(currentPhase);
     const messages={
-      gathering:['두 손 사이에, 작은 온기.','둥근 구슬을 감싸듯, 두 손을 번갈아 천천히 움직여보세요.'],
+      gathering:['기원의 불꽃을 깨워보세요.','둘 중 편한 한 가지 방법으로 소원을 담아주세요.'],
       approaching:['당신의 온기를 만나러 와요.','작은 불씨가 태어났어요. 잠시 손을 편하게 두세요.'],
       igniting:['소원의 불이 밝아집니다.','불씨가 열린 입구로 들어가 풍등을 따뜻하게 밝혀요.'],
       waiting:['따뜻한 빛을, 두 손에.','두 손을 조금 벌리고, 테두리를 잡듯 손가락을 오므려주세요.'],
@@ -194,24 +204,35 @@ export function startExperience(view) {
       complete:['마음에 품은 빛, 하늘에 닿기를.','새해의 소망이 오래도록 따뜻하게 빛나기를.'],
     };
     text('instruction-title',lost?'풍등은 여기서 기다릴게요.':messages[currentPhase][0]);
-    text('instruction-detail',lost?'두 손을 다시 보여주고, 테두리를 잡듯 오므려주세요.':mode==='mouse'&&currentPhase==='waiting'?'아래 버튼으로 잡거나, 테두리 근처를 누른 채 위로 움직여보세요.':mode==='mouse'&&currentPhase==='gathering'?'화면을 누른 채 둥글게 움직이거나, 아래 버튼으로 두 손을 굴려보세요.':messages[currentPhase][1]);
-    ui['lift-progress'].hidden=!mode||!['gathering','holding','raised'].includes(currentPhase);
-    ui['lift-progress'].value=currentPhase==='gathering'?orb.state.energy:state.lift;
-    ui['lift-progress'].setAttribute('aria-label',currentPhase==='gathering'?'두 손에 모인 온기':'풍등을 들어 올린 높이');
+    text('instruction-detail',lost?'두 손을 다시 보여주고, 테두리를 잡듯 오므려주세요.':mode==='mouse'&&currentPhase==='waiting'?'아래 버튼으로 잡거나, 테두리 근처를 누른 채 위로 움직여보세요.':messages[currentPhase][1]);
+    ui['lift-progress'].hidden=!mode||!['holding','raised'].includes(currentPhase);
+    ui['lift-progress'].value=state.lift;
+    ui['gather-options'].hidden=!mode||currentPhase!=='gathering';
+    ui['rolling-progress'].value=orb.state.energy;
+    ui['prayer-progress'].value=orb.state.prayerProgress;
+    ui['rolling-card'].dataset.engaged=String(!orb.state.praying&&orb.state.motion>0.12);
+    ui['prayer-card'].dataset.engaged=String(orb.state.praying);
+    text('rolling-status',orb.state.motion>0.12&&!orb.state.praying?'온기가 모이고 있어요':orb.state.energy>0?'모은 온기를 간직하고 있어요':'천천히 굴려주세요');
+    text('prayer-status',orb.state.praying?'소원을 담고 있어요 · 잠시 그대로':'두 손을 모아 약 3초간 머물러요');
+    ui['mouse-roll'].hidden=ui['mouse-pray'].hidden=mode!=='mouse';
+    text('mouse-roll',mouse.rolling?'굴리기 멈추기':'굴리기 체험');
+    text('mouse-pray',mouse.praying?'손 모으기 멈추기':'손 모으기 체험');
+    ui['mouse-roll'].setAttribute('aria-pressed',String(mouse.rolling));
+    ui['mouse-pray'].setAttribute('aria-pressed',String(mouse.praying));
     if(mode==='mouse') {
       const label=lost?'테두리 다시 잡기':currentPhase==='gathering'?(mouse.rolling?'잠시 멈추기':'두 손으로 굴리기'):currentPhase==='approaching'?'풍등이 다가오는 중…':currentPhase==='igniting'?'온기를 받는 중…':currentPhase==='waiting'?(mouse.grip?'손을 맞추는 중…':'테두리 잡기'):currentPhase==='holding'?'풍등 들어 올리기':currentPhase==='raised'?'손을 펴서 보내기':'하늘로 보내는 중…';
       text('mouse-action',label);
-      ui['mouse-action'].hidden=['released','complete'].includes(currentPhase);
+      ui['mouse-action'].hidden=['gathering','released','complete'].includes(currentPhase);
       ui['mouse-action'].disabled=['approaching','igniting'].includes(currentPhase)||(currentPhase==='waiting'&&mouse.grip);
       ui['input-note'].hidden=['approaching','igniting','released','complete'].includes(currentPhase);
-      text('input-note',currentPhase==='gathering'?'마우스 체험 · 버튼을 누르면 두 손이 천천히 굴러요':'마우스 체험 · 화면의 두 손을 함께 움직여요');
+      text('input-note',currentPhase==='gathering'?'마우스 체험 · 카드의 버튼으로 두 방법을 체험할 수 있어요':'마우스 체험 · 화면의 두 손을 함께 움직여요');
       text('tracking-status','');
     } else if(mode==='camera'&&cameraState==='ready') {
       let hint='';
       if(lost) hint='손이 잠깐 사라져도 풍등은 날아가지 않아요.';
       else if(['gathering','waiting'].includes(currentPhase)) {
         const count=sides.filter(side=>inputs[side]?.tracked).length;
-        hint=count===0?'카메라 앞에 두 손을 보여주세요.':count===1?'한 손이 보여요. 다른 손도 함께 보여주세요.':currentPhase==='gathering'?(orb.state.motion>0.12?'움직임을 따라 온기가 모이고 있어요.':'한 손을 조금 올리고, 다른 손은 내리듯 천천히 굴려주세요.'):'작은 점을 맞추지 않아도 괜찮아요. 양손으로 가볍게 잡아보세요.';
+        hint=count===0?'카메라 앞에 두 손을 보여주세요.':count===1?'한 손이 보여요. 두 손이 모두 보이도록 조금 벌려주세요.':currentPhase==='gathering'?(orb.state.praying?'좋아요. 두 손을 모은 채 마음속으로 소원을 빌어주세요.':'구슬을 굴리거나, 손끝을 위로 향해 두 손을 가까이 모아주세요.'):'작은 점을 맞추지 않아도 괜찮아요. 양손으로 가볍게 잡아보세요.';
       } else if(state.leftHeld!==state.rightHeld) {
         if(currentPhase==='holding') hint='다시 두 손으로 잡고, 천천히 조금 올려주세요.';
         if(currentPhase==='raised') hint='한 손으로도 잠시 붙잡고 있어요. 준비되면 다른 손도 펴주세요.';
@@ -226,10 +247,11 @@ export function startExperience(view) {
       mouse.y=mix(mouse.y,mouse.targetY,1-Math.exp(-dt*6));
       if(oldPhase==='gathering'&&mouse.rolling) mouse.targetOrbit+=dt*1.8;
       mouse.orbit=mix(mouse.orbit,mouse.targetOrbit,1-Math.exp(-dt*9));
-      const rolling=prelude(),wave=Math.sin(mouse.orbit);
+      const praying=oldPhase==='gathering'&&mouse.praying;
+      const rolling=prelude()&&!praying,wave=praying?0:Math.sin(mouse.orbit);
       inputs=Object.fromEntries(sides.map((side,i)=>{
         const sign=i?1:-1;
-        return [side,{id:`mouse-${side}`,tracked:true,grip:mouse.grip,open:mouse.open,amount:mouse.grip?1:0,y:mouse.y+(rolling?sign*0.045*wave:0),x:mouse.x+sign*(rolling?0.18+0.018*Math.cos(mouse.orbit):0.2),roll:-Math.PI/2+sign*0.24*wave,displayRoll:sign*0.6*wave,near:true,contact:layout[side]}];
+        return [side,{id:`mouse-${side}`,tracked:true,grip:mouse.grip,open:mouse.open,amount:mouse.grip?1:0,y:mouse.y+(rolling?sign*0.045*wave:0),x:mouse.x+sign*(praying?0.04:rolling?0.18+0.018*Math.cos(mouse.orbit):0.2),roll:-Math.PI/2+sign*0.24*wave,displayRoll:sign*0.6*wave,near:true,contact:layout[side],palmScale:0.08,prayerPose:praying}];
       }));
     } else inputs=mode==='camera'?cameraInputs(layout):{};
     if(mode) {
@@ -237,7 +259,7 @@ export function startExperience(view) {
       else ritual.update(dt,inputs);
     }
     if(oldPhase==='gathering'&&phase()!=='gathering') {
-      mouse.rolling=false;dragId=null;dragStart=null;
+      mouse.rolling=false;mouse.praying=false;dragId=null;dragStart=null;
     }
     if(oldPhase==='igniting'&&phase()==='waiting') {mouse.grip=false;mouse.open=true;}
     const state=ritual.state;
@@ -249,14 +271,16 @@ export function startExperience(view) {
       if(state.leftHeld!==state.rightHeld) tilt+=state.leftHeld?-0.06:0.06;
     }
     if(oldPhase!=='released'&&state.phase==='released') releaseAnchors={left:{...layout.left},right:{...layout.right}};
-    view.setState({active:!!mode,phase:phase(),energy:orb.state.energy,motion:orb.state.motion,turn:orb.state.turn,phaseProgress:orb.state.phaseProgress,lift:state.lift,offset,tilt,progress:state.progress,leftHeld:state.leftHeld,rightHeld:state.rightHeld,handLost:state.handLost});
-    sound.update({active:!!mode,phase:phase(),energy:orb.state.energy,motion:orb.state.motion,progress:state.progress});
+    const energy=Math.max(orb.state.energy,orb.state.prayerProgress);
+    view.setState({active:!!mode,phase:phase(),energy,motion:orb.state.motion,turn:orb.state.turn,phaseProgress:orb.state.phaseProgress,lift:state.lift,offset,tilt,progress:state.progress,leftHeld:state.leftHeld,rightHeld:state.rightHeld,handLost:state.handLost});
+    sound.update({active:!!mode,phase:phase(),energy,motion:orb.state.motion,progress:state.progress});
     updateUI();
   });
 
   // Draw from this frame's projected rim, after the 3D lantern has moved.
   view.onAfterFrame((dt,time)=>{
     const layout=view.getLayout(),state=ritual.state,currentPhase=phase();
+    const praying=currentPhase==='gathering'&&orb.state.praying;
     const flight=['released','complete'].includes(state.phase);
     const elapsed=state.progress*FLIGHT_SECONDS;
     const hands=[];
@@ -269,14 +293,16 @@ export function startExperience(view) {
       if(orbBlend>0&&layout.orbLeft) {
         const anchor=side==='left'?layout.orbLeft:layout.orbRight;
         const relativeY=inputs.left?.tracked&&inputs.right?.tracked?input.y-(inputs.left.y+inputs.right.y)/2:0;
-        const orbContact={x:anchor.x+clamp((input.x-(side==='left'?0.3:0.7))*0.18,-0.045,0.045),y:anchor.y+clamp(relativeY*0.5,-0.045,0.045)};
+        const orbContact=praying
+          ?{x:(layout.orbLeft.x+layout.orbRight.x)/2+(side==='left'?-0.025:0.025),y:anchor.y+0.05}
+          :{x:anchor.x+clamp((input.x-(side==='left'?0.3:0.7))*0.18,-0.045,0.045),y:anchor.y+clamp(relativeY*0.5,-0.045,0.045)};
         contact={x:mix(contact.x,orbContact.x,orbBlend),y:mix(contact.y,orbContact.y,orbBlend)};
       }
       if(flight&&releaseAnchors) contact={x:releaseAnchors[side].x+(side==='left'?-1:1)*0.025*Math.min(1,elapsed),y:releaseAnchors[side].y+Math.min(0.11,elapsed*0.07)};
       const previous=drawn.get(side);
       const blend=1-Math.exp(-dt*14);
-      const gripTarget=prelude()?0.3:flight?0:held||input.grip?1:input.open?0:(input.amount||0);
-      const item={side,contact:held||!previous?contact:{x:mix(previous.contact.x,contact.x,blend),y:mix(previous.contact.y,contact.y,blend)},grip:mix(previous?.grip||0,gripTarget,blend),opacity:flight?clamp(1-elapsed/2.4,0,1):0.9,pose:orbBlend>0?'orb':'rim',orbBlend,roll:mix(previous?.roll||0,input.displayRoll||0,blend)};
+      const gripTarget=praying?0:prelude()?0.3:flight?0:held||input.grip?1:input.open?0:(input.amount||0);
+      const item={side,contact:held||!previous?contact:{x:mix(previous.contact.x,contact.x,blend),y:mix(previous.contact.y,contact.y,blend)},grip:mix(previous?.grip||0,gripTarget,blend),opacity:flight?clamp(1-elapsed/2.4,0,1):0.9,pose:orbBlend>0?'orb':'rim',orbBlend:mix(previous?.orbBlend??orbBlend,praying?0:orbBlend,blend),angle:mix(previous?.angle||0,praying?(side==='left'?0.35:-0.35):0,blend),roll:mix(previous?.roll||0,input.displayRoll||0,blend)};
       drawn.set(side,item);hands.push(item);
     }
     visual.render({hands,phase:currentPhase,time,reducedMotion:layout.reducedMotion});

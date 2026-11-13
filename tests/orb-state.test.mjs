@@ -14,6 +14,9 @@ const rolling=(t,withRoll=true)=>{
   if(!withRoll) {delete value.left.roll;delete value.right.roll;}
   return value;
 };
+const prayer=(t,left={},right={})=>frame(t,
+  {x:0.46,y:0.6,palmScale:0.08,prayerPose:true,...left},
+  {x:0.54,y:0.6,palmScale:0.08,prayerPose:true,...right});
 function run(orb,seconds,makeFrame,start=0,fps=60) {
   for(let i=0;i<Math.round(seconds*fps);i++) {
     const time=start+i/fps;
@@ -151,7 +154,110 @@ test('reset clears the motion reference, energy and phase without replacing the 
   assert.ok(state.energy>0);
   orb.reset();
   assert.equal(orb.state,state);
-  assert.deepEqual(state,{phase:'gathering',energy:0,motion:0,turn:0,phaseProgress:0});
+  assert.deepEqual(state,{phase:'gathering',energy:0,motion:0,turn:0,phaseProgress:0,prayerProgress:0,praying:false});
   orb.update(1/60,frame(100,{x:0.1},{x:0.9}));
   assert.equal(state.energy,0);
+});
+
+test('holding the prayer pose alone creates an ember after three seconds at all input rates',()=>{
+  for(const cameraFps of [12,24,60]) {
+    const orb=createOrbState();
+    let time=0;
+    for(;time<4&&orb.state.phase==='gathering';time+=1/60) {
+      const sample=Math.floor(time*cameraFps+1e-8)/cameraFps;
+      orb.update(1/60,prayer(sample));
+    }
+    assert.equal(orb.state.phase,'approaching');
+    assert.ok(time>=3&&time<3.2,`${cameraFps} fps: ${time}s`);
+    assert.equal(orb.state.prayerProgress,1);
+    assert.equal(orb.state.energy,1);
+    assert.equal(orb.state.turn,0);
+    run(orb,4.4,()=>({}));
+    assert.equal(orb.state.phase,'ready');
+  }
+});
+
+test('prayer uses hand size and camera aspect, while nearby unqualified hands never charge',()=>{
+  for(const scale of [0.04,0.08,0.14]) for(const aspect of [3/4,4/3,16/9]) {
+    const orb=createOrbState();
+    run(orb,1,t=>({...prayer(t,
+      {x:0.5-scale/2,y:0.6,palmScale:scale},
+      {x:0.5+scale/2,y:0.6+scale*aspect*0.3,palmScale:scale}),sourceAspect:aspect}));
+    assert.ok(orb.state.prayerProgress>0.3);
+    assert.equal(orb.state.energy,0);
+  }
+  for(const makeFrame of [
+    t=>prayer(t,{prayerPose:false}),
+    t=>prayer(t,{x:0.3},{x:0.7}),
+    t=>prayer(t,{}, {y:0.85}),
+    t=>prayer(t,{palmScale:0}),
+    t=>prayer(t,{palmScale:NaN}),
+    t=>prayer(t,{palmScale:0.02}),
+    t=>prayer(t,{id:'same'},{id:'same'}),
+    t=>prayer(t,{tracked:false}),
+  ]) {
+    const orb=createOrbState();
+    run(orb,4,makeFrame);
+    assert.equal(orb.state.phase,'gathering');
+    assert.equal(orb.state.energy,0);
+    assert.equal(orb.state.prayerProgress,0);
+  }
+});
+
+test('repeated or older camera samples never extend a prayer hold',()=>{
+  const orb=createOrbState();
+  run(orb,1,prayer);
+  const progress=orb.state.prayerProgress;
+  run(orb,4,()=>prayer(59/60));
+  run(orb,4,()=>prayer(0.5));
+  assert.equal(orb.state.prayerProgress,progress);
+  assert.equal(orb.state.phase,'gathering');
+});
+
+test('breaking the prayer pose, losing a hand or replacing tracking restarts the hold',()=>{
+  for(const next of [
+    prayer(1,{prayerPose:false}),
+    prayer(1,{tracked:false}),
+    prayer(1,{id:'replacement'}),
+    {...prayer(1),sourceAspect:16/9},
+    prayer(2),
+    prayer(1,{x:0.05},{x:0.15}),
+  ]) {
+    const orb=createOrbState();
+    run(orb,1,prayer);
+    assert.ok(orb.state.prayerProgress>0.3);
+    orb.update(1/60,next);
+    assert.equal(orb.state.prayerProgress,0);
+    assert.equal(orb.state.phase,'gathering');
+  }
+});
+
+test('partial rolling and prayer cannot add up to an early completion',()=>{
+  const orb=createOrbState();
+  run(orb,3,rolling);
+  const rolled=orb.state.energy;
+  assert.ok(rolled>0.5);
+  run(orb,1.8,prayer,3);
+  assert.ok(orb.state.prayerProgress>0.5);
+  assert.equal(orb.state.phase,'gathering');
+  assert.equal(orb.state.energy,rolled);
+  run(orb,1.5,prayer,4.8);
+  assert.equal(orb.state.phase,'approaching');
+
+  const alternative=createOrbState();
+  run(alternative,1.5,prayer);
+  run(alternative,6,rolling,1.5);
+  assert.notEqual(alternative.state.phase,'gathering');
+  assert.equal(alternative.state.prayerProgress,0);
+});
+
+test('reset clears a partially held prayer as well as rolling energy',()=>{
+  const orb=createOrbState();
+  run(orb,2,prayer);
+  assert.ok(orb.state.prayerProgress>0.6);
+  orb.reset();
+  assert.equal(orb.state.prayerProgress,0);
+  assert.equal(orb.state.praying,false);
+  run(orb,1.5,prayer,2);
+  assert.equal(orb.state.phase,'gathering');
 });

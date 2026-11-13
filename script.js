@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { startExperience } from './experience.js?v=sound-1';
+import { startExperience } from './experience.js?v=gathering-choice-1';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js?v=park-2';
 import { createParkFinale } from './park-finale.js?v=park-life-1';
