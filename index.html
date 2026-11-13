@@ -34,7 +34,7 @@
         <span class="masthead-note">한 해의 시작에</span>
         <button id="sound-toggle" class="quiet-button" type="button" aria-pressed="true" title="음악과 효과음 끄기" hidden>소리 켜짐</button>
         <button id="stop-camera" class="quiet-button" type="button" hidden>카메라 끄기</button>
-        <button id="restart" class="quiet-button" type="button" hidden>처음부터 다시</button>
+        <button id="restart" class="quiet-button" type="button" title="R 키를 누르면 첫 화면을 다시 불러옵니다" hidden>처음부터 다시</button>
       </div>
     </header>
 
@@ -72,6 +72,14 @@
     </footer>
 
     <noscript>풍등을 보려면 브라우저의 JavaScript를 켜 주세요.</noscript>
+    <script>
+      // Keep the recovery shortcut independent of the experience modules.
+      window.addEventListener('keydown', (event) => {
+        if (event.code !== 'KeyR' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+        event.preventDefault();
+        window.location.reload();
+      });
+    </script>
     <script type="module" src="./script.js?v=park-life-1"></script>
   </body>
 </html>
