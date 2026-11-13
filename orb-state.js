@@ -1,3 +1,5 @@
+import { APPROACH_SECONDS } from './approach-motion.js';
+
 // sampleTime is a monotonic camera/performance timestamp in milliseconds.
 // Rolling and a held prayer pose are independent ways to gather warmth.
 // Only fresh camera samples contribute, never repeated render frames.
@@ -40,7 +42,7 @@ export function createOrbState() {
     if(state.phase!=='gathering') {
       motionTarget=0;
       if(state.phase==='ready') return state;
-      const duration=state.phase==='approaching'?2.6:1.8;
+      const duration=state.phase==='approaching'?APPROACH_SECONDS:1.8;
       phaseTime=Math.min(duration,phaseTime+elapsed);
       state.phaseProgress=phaseTime/duration;
       if(phaseTime>=duration-1e-9) {

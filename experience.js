@@ -3,7 +3,7 @@ import { createHandVisual } from './hand-visual.js?v=warmth-design-1';
 import { createReleaseState, FLIGHT_SECONDS } from './release-state.js';
 import { classifyHandGrip } from './hand-grip.js';
 import { classifyPrayerHand } from './hand-prayer.js';
-import { createOrbState } from './orb-state.js';
+import { createOrbState } from './orb-state.js?v=approach-1';
 import { createSoundscape } from './soundscape.js';
 
 export function startExperience(view) {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createOrbState} from '../orb-state.js';
+import {APPROACH_SECONDS} from '../approach-motion.js';
 
 const frame=(t,left={},right={})=>({
   sampleTime:t*1000,sourceAspect:4/3,
@@ -134,10 +135,10 @@ test('completed energy runs automatic approach and ignition once, without requir
   const orb=createOrbState();
   completeGathering(orb);
   assert.equal(orb.state.phaseProgress,0);
-  run(orb,1.3,()=>({}));
+  run(orb,APPROACH_SECONDS/2,()=>({}));
   assert.equal(orb.state.phase,'approaching');
   assert.ok(Math.abs(orb.state.phaseProgress-0.5)<1e-9);
-  run(orb,1.3,()=>({}));
+  run(orb,APPROACH_SECONDS/2,()=>({}));
   assert.equal(orb.state.phase,'igniting');
   assert.equal(orb.state.phaseProgress,0);
   run(orb,1.8,()=>({}));
@@ -172,7 +173,7 @@ test('holding the prayer pose alone creates an ember after three seconds at all 
     assert.equal(orb.state.prayerProgress,1);
     assert.equal(orb.state.energy,1);
     assert.equal(orb.state.turn,0);
-    run(orb,4.4,()=>({}));
+    run(orb,APPROACH_SECONDS+1.8,()=>({}));
     assert.equal(orb.state.phase,'ready');
   }
 });

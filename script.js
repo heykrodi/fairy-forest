@@ -3,7 +3,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { startExperience } from './experience.js?v=warmth-design-1';
+import { startExperience } from './experience.js?v=approach-1';
+import { sampleApproach } from './approach-motion.js';
 import { createEmberCharacter } from './ember-character.js';
 import { createLanternFinale } from './lantern-finale.js?v=park-2';
 import { createParkFinale } from './park-finale.js?v=park-life-1';
@@ -442,6 +443,7 @@ function createScene() {
     const phaseProgress = THREE.MathUtils.clamp(ritualView.phaseProgress || 0, 0, 1);
     const energy = phase === 'gathering' ? THREE.MathUtils.clamp(ritualView.energy || 0, 0, 1) : 1;
     const motion = THREE.MathUtils.clamp(ritualView.motion || 0, 0, 1);
+    const arrival = sampleApproach(phase === 'approaching' ? phaseProgress : 1, reducedMotion);
     const orbX = 0.5;
     worldFromScreen(orbX, narrow ? 0.67 : 0.65, 0, orbHome);
 
@@ -480,24 +482,41 @@ function createScene() {
       }
       finale.update(camera, finalPitch, p, afterglow, elapsed, reducedMotion, finaleOrigin, 1 - Math.exp(-flight.ending * 0.16));
     } else if (prelude) {
-      lantern.rotation.x = -0.035;
-      lantern.rotation.y = -0.08;
-      lantern.rotation.z = THREE.MathUtils.damp(lantern.rotation.z, 0, 10, dt);
       if (phase === 'gathering') {
+        lantern.rotation.x = -0.035;
+        lantern.rotation.y = -0.08;
+        lantern.rotation.z = THREE.MathUtils.damp(lantern.rotation.z, 0, 10, dt);
         lantern.scale.setScalar(narrow ? 0.43 : 0.82);
         const target = screenToRim(narrow ? 0.87 : 0.84, narrow ? 0.49 : 0.40, -5);
         if (!initialized) lantern.position.copy(target);
         else springTo(target, dt);
       } else {
         if (phase === 'approaching') {
-          if (!approach) approach = { position: lantern.position.clone(), scale: lantern.scale.x };
-          const eased = THREE.MathUtils.smoothstep(phaseProgress, 0, 1);
-          lantern.scale.setScalar(THREE.MathUtils.lerp(approach.scale, narrow ? 1 : 1.10, eased));
-          const target = screenToRim(orbX, 0.605);
-          lantern.position.lerpVectors(approach.position, target, eased);
+          if (!approach) approach = {
+            rim: lantern.localToWorld(rimCenter.clone()),
+            rotation: lantern.rotation.clone(), scale: lantern.scale.x,
+          };
+          lantern.rotation.set(
+            THREE.MathUtils.lerp(approach.rotation.x, -0.035, arrival.travel),
+            THREE.MathUtils.lerp(approach.rotation.y, -0.08, arrival.travel) + arrival.yaw,
+            THREE.MathUtils.lerp(approach.rotation.z, 0, arrival.travel) + arrival.lean,
+          );
+          lantern.scale.setScalar(THREE.MathUtils.lerp(approach.scale, narrow ? 1 : 1.10, arrival.travel));
+          // Animate the actual open rim: scaling and banking must not pull it off its path.
+          worldFromScreen(orbX, 0.605, 0, targetPosition);
+          desiredRim.lerpVectors(approach.rim, targetPosition, arrival.travel);
+          desiredRim.y += arrival.lift;
+          anchorOffset.copy(rimCenter).multiply(lantern.scale).applyQuaternion(lantern.quaternion);
+          lantern.position.copy(desiredRim).sub(anchorOffset);
         } else {
+          lantern.rotation.set(-0.035, -0.08, 0);
           lantern.scale.setScalar(narrow ? 1 : 1.10);
-          lantern.position.copy(screenToRim(orbX, 0.605));
+          // Once the ember has entered the bowl, offer the rim to the waiting hands.
+          const handover = THREE.MathUtils.smootherstep(phaseProgress, 0.68, 1);
+          lantern.position.copy(screenToRim(
+            THREE.MathUtils.lerp(orbX, narrow ? 0.54 : 0.58, handover),
+            THREE.MathUtils.lerp(0.605, 0.71, handover),
+          ));
         }
         velocity.set(0, 0, 0);
       }
@@ -557,14 +576,18 @@ function createScene() {
       const born = THREE.MathUtils.smoothstep(energy, 0.35, 0.90);
       const fading = phase === 'igniting' ? 1 - THREE.MathUtils.smoothstep(phaseProgress, 0.60, 0.82) : 1;
       const transferScale = phase === 'igniting' ? THREE.MathUtils.lerp(1, 0.42, THREE.MathUtils.smoothstep(phaseProgress, 0.15, 0.58)) : 1;
-      emberCharacter.group.scale.setScalar((0.015 + THREE.MathUtils.smoothstep(energy, 0, 1) * 0.225) * transferScale);
+      const birthPulse = arrival.birth;
+      const emberScale = (0.015 + THREE.MathUtils.smoothstep(energy, 0, 1) * 0.225) * transferScale;
+      emberCharacter.group.scale.set(emberScale * (1 - birthPulse * 0.04), emberScale * (1 + birthPulse * 0.16), emberScale);
       emberCharacter.group.quaternion.copy(camera.quaternion);
       emberCharacter.update({time:elapsed,energy,opacity:THREE.MathUtils.smoothstep(energy,0.04,0.32)*fading,motion,reducedMotion});
-      orbGlow.material.opacity = (0.32 + energy * 0.76) * fading;
-      currents.visible = phase === 'gathering';
+      orbGlow.material.opacity = (0.32 + energy * 0.76) * (1 + birthPulse * 0.20) * fading;
+      orbGlow.scale.setScalar(3.5 * (1 + birthPulse * 0.18));
+      const currentFade = phase === 'gathering' ? 1 : phase === 'approaching' ? 1 - THREE.MathUtils.smootherstep(phaseProgress, 0, 0.20) : 0;
+      currents.visible = currentFade > 0;
       currents.rotation.z = reducedMotion ? 0 : orbTime * 0.30 + shownTurn * 0.18;
       currentMaterials.forEach(material => {
-        material.uniforms.uOpacity.value = (0.32 + energy * 0.32 + motion * 0.10) * (1 - born * 0.45);
+        material.uniforms.uOpacity.value = (0.32 + energy * 0.32 + motion * 0.10) * (1 - born * 0.45) * currentFade;
         material.uniforms.uEnergy.value = energy;
       });
       sparkMaterial.uniforms.uEnergy.value = energy;
