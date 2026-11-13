@@ -500,9 +500,9 @@ function createScene() {
       lantern.rotation.z = THREE.MathUtils.damp(lantern.rotation.z, desiredTilt, 10, dt);
       lantern.rotation.x = -0.035;
       lantern.rotation.y = -0.08;
-      lantern.scale.setScalar(narrow ? 1 : 1.10);
-      const centerX = active ? (narrow ? 0.54 : 0.58) : (narrow ? 0.52 : 0.71);
-      const centerY = active ? 0.71 : (narrow ? 0.78 : 0.76);
+      lantern.scale.setScalar(narrow ? (active ? 1 : 0.58) : 1.10);
+      const centerX = active ? (narrow ? 0.54 : 0.58) : (narrow ? 0.77 : 0.71);
+      const centerY = active ? 0.71 : (narrow ? 0.42 : 0.79);
       const x = centerX + (active ? THREE.MathUtils.clamp(offset.x || 0, -0.18, 0.18) : 0);
       const y = centerY - (active ? lift * 0.14 : 0) + (active ? THREE.MathUtils.clamp(offset.y || 0, -0.10, 0.10) : 0);
       const target = screenToRim(x, y);

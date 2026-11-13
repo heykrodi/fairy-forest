@@ -49,7 +49,6 @@ body {
 
 .masthead-actions { display: flex; align-items: center; gap: 18px; }
 .masthead-actions button { pointer-events: auto; }
-.sound-note { margin-top: 14px; color: #c7b5ad; font-size: 11px; line-height: 1.7; }
 #sound-toggle[aria-pressed="false"] { color: #b3a9ae; }
 
 .wordmark {
@@ -74,47 +73,61 @@ body {
 
 .mark-flame { fill: #c4a580; stroke: none; }
 .wordmark:focus-visible { outline: 1px solid #edcf9d; outline-offset: 9px; }
-.masthead-note { color: #bbb1b9; font-size: 11px; letter-spacing: .15em; }
+body[data-active="false"] .wordmark { color: #ffcd80; }
+body[data-active="false"] .wordmark svg { stroke: currentColor; }
+body[data-active="false"] .mark-flame { fill: currentColor; }
 
 .introduction {
   position: fixed;
-  top: 40%;
-  left: 9.5%;
-  transform: translateY(-30%);
-  pointer-events: none;
+  inset: 0;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: auto;
+  padding: clamp(80px, 12vh, 130px) 5vw clamp(20px, 5vh, 50px);
+  color: #ffebc5;
 }
+
+.intro-content {
+  margin: auto 0 auto 4vw;
+  width: 43vw;
+}
+
+.intro-content h1 { margin: 0; }
+.intro-content img {
+  display: block;
+  width: min(33vw, 48vh, 465px);
+  height: auto;
+  margin-left: -1.4vw;
+}
+.intro-tagline {
+  margin: 0;
+  font-size: clamp(22px, 2.2vw, 36px);
+  font-weight: 650;
+  line-height: 1.35;
+}
+.description {
+  margin: 10px 0 0;
+  font-size: clamp(15px, 1.45vw, 23px);
+  line-height: 1.5;
+}
+.intro-notes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  font-size: clamp(12px, 1.2vw, 18px);
+  line-height: 1.5;
+}
+.intro-notes p { margin: 0; }
 
 .eyebrow {
   margin: 0 0 23px;
   color: #c7b5ad;
   font-size: 11px;
   letter-spacing: .15em;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(32px, 3.3vw, 56px);
-  font-weight: 400;
-  line-height: 1.65;
-  letter-spacing: -.045em;
-  text-shadow: 0 2px 24px #12132355;
-}
-
-.quiet-line {
-  display: block;
-  width: 30px;
-  height: 1px;
-  margin: 29px 0 24px;
-  background: #b3947577;
-}
-
-.description {
-  margin: 0;
-  color: #bfb4b8;
-  font-size: 12px;
-  line-height: 2.1;
-  letter-spacing: .04em;
 }
 
 button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -159,7 +172,22 @@ button:focus-visible { outline: 2px solid #f1d4a2; outline-offset: 6px; }
 .text-button { padding: 3px 0; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: #c7bcc440; }
 .text-button:hover, .quiet-button:hover { color: #f4e8d8; }
 .quiet-button { min-height: 40px; padding: 8px 12px; border: 1px solid #c7bcc42b; border-radius: 24px; }
-.privacy-note { margin: 1px 0 0; color: #a99fa9; font-size: 10px; line-height: 1.9; }
+#camera-start {
+  justify-content: space-between;
+  min-width: min(100%, clamp(215px, 22vw, 350px));
+  min-height: clamp(50px, 8vh, 80px);
+  padding-inline: clamp(22px, 3vw, 50px);
+  border-color: transparent;
+  background: #ffca75;
+  color: #22182b;
+  font-size: clamp(16px, 1.7vw, 27px);
+  font-weight: 750;
+  letter-spacing: 0;
+}
+#camera-start:hover { background: #ffda98; }
+#camera-start:active { background: #f2b85f; }
+#camera-start span { color: inherit; font-size: 1.25em; }
+#mouse-start { color: inherit; font-size: clamp(15px, 1.4vw, 22px); text-decoration-color: currentColor; }
 
 .instruction {
   position: fixed;
@@ -192,9 +220,7 @@ body[data-phase="released"] .instruction .eyebrow, body[data-phase="complete"] .
 #tracking-status:empty { display: none; }
 #mouse-action { min-width: 150px; user-select: none; touch-action: none; }
 
-body[data-active="true"] #intro,
-body[data-active="true"] .scene-caption,
-body[data-active="true"] .masthead-note { display: none; }
+body[data-active="true"] #intro { display: none; }
 body[data-active="true"] .instruction,
 body[data-active="true"] .active-controls { display: block; }
 
@@ -251,19 +277,6 @@ body[data-active="true"][data-phase="gathering"] .gather-options { display: grid
 body[data-phase="gathering"] #tracking-status { width: fit-content; max-width: 100%; margin: 0 auto 12px; padding: 9px 16px; border-radius: 10px; color: #f4e8d8; background: #171727e8; font-size: 15px; line-height: 1.6; }
 body[data-phase="gathering"] #input-note { color: #e1d7d4; font-size: 13px; }
 
-.scene-caption {
-  position: fixed;
-  right: 0;
-  bottom: clamp(24px, 5vh, 48px);
-  left: 0;
-  text-align: center;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.caption-star { color: #c5a57e; font-size: 12px; }
-.scene-caption p { margin: 12px 0 0; color: #c2b1af; font-size: 11px; letter-spacing: .14em; }
-
 #status {
   position: fixed;
   right: 24px;
@@ -288,19 +301,14 @@ noscript { position: fixed; bottom: 120px; left: 24px; right: 24px; text-align: 
 
 @media (max-width: 700px) {
   .masthead { padding: 24px; }
-  .masthead-note { display: none; }
   .wordmark { font-size: 11px; gap: 10px; }
   .wordmark svg { width: 19px; height: 25px; }
-  .introduction { top: 16%; left: 0; right: 0; transform: none; text-align: center; }
+  .introduction { padding: 80px 24px 24px; }
+  .intro-content { width: 100%; margin: auto 0; }
+  .intro-content img { width: min(48vw, 32vh, 255px); margin-left: -8px; }
+  .controls { margin-top: 20px; gap: 12px; }
   .eyebrow { margin-bottom: 15px; font-size: 10px; }
-  h1 { font-size: clamp(28px, 7.4vw, 40px); line-height: 1.55; }
-  .quiet-line, .description { display: none; }
-  .scene-caption p { font-size: 10px; }
-  .controls { align-items: center; margin-top: 24px; gap: 13px; }
   .primary-button { min-height: 44px; padding: 11px 21px; font-size: 12px; }
-  .privacy-note { font-size: 9px; }
-  .sound-note { margin-top: 0; font-size: 10px; }
-  .scene-caption { bottom: 24px; }
   .masthead-actions { gap: 7px; }
   .quiet-button { padding: 7px 10px; font-size: 10px; min-height: 36px; }
   .instruction { top: 105px; left: 24px; right: 24px; max-width: none; text-align: center; }
@@ -336,14 +344,10 @@ noscript { position: fixed; bottom: 120px; left: 24px; right: 24px; text-align: 
 
 @media (max-height: 520px) and (min-width: 701px) {
   .masthead { padding-top: 20px; padding-bottom: 20px; }
-  .introduction { top: 32%; }
-  h1 { font-size: 30px; line-height: 1.5; }
+  .introduction { padding-top: 64px; }
+  .intro-content img { width: min(26vw, 37vh); }
+  .controls { margin-top: 16px; gap: 8px; }
   .eyebrow { margin-bottom: 12px; }
-  .quiet-line { margin: 15px 0; }
-  .scene-caption { bottom: 16px; }
-  .controls { margin-top: 18px; gap: 10px; }
-  .privacy-note { display: none; }
-  .description { display: none; }
   .instruction { top: 100px; }
   .active-controls { bottom: 18px; }
   body[data-phase="gathering"] { --gather-guide-top: 76px; --gather-cards-top: 164px; }

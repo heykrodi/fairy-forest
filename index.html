@@ -7,7 +7,7 @@
     <meta name="description" content="두 손 사이에서 작은 불씨를 깨우고, 따뜻해진 풍등에 새해의 소원을 담아 밤하늘로 놓아주세요.">
     <title>소원을 담은 밤</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./style.css?v=gathering-choice-1">
+    <link rel="stylesheet" href="./style.css?v=lettering-1">
     <script type="importmap">
       {
         "imports": {
@@ -31,7 +31,6 @@
         <span>소원을 담은 밤</span>
       </a>
       <div class="masthead-actions">
-        <span class="masthead-note">한 해의 시작에</span>
         <button id="sound-toggle" class="quiet-button" type="button" aria-pressed="true" title="음악과 효과음 끄기" hidden>소리 켜짐</button>
         <button id="stop-camera" class="quiet-button" type="button" hidden>카메라 끄기</button>
         <button id="restart" class="quiet-button" type="button" title="R 키를 누르면 첫 화면을 다시 불러옵니다" hidden>처음부터 다시</button>
@@ -39,16 +38,19 @@
     </header>
 
     <main id="intro" class="introduction">
-      <p class="eyebrow">고요한 밤, 작은 온기 하나</p>
-      <h1>마음에 품은 빛,<br>하늘에 닿기를.</h1>
-      <span class="quiet-line" aria-hidden="true"></span>
-      <p class="description">두 손 사이에서 작은 온기를 깨우고,<br>소원을 담은 풍등을 놓아주세요.</p>
-      <div class="controls" aria-label="체험 시작 방법">
-        <button id="camera-start" class="primary-button" type="button" aria-describedby="privacy-note">손으로 시작하기 <span aria-hidden="true">↗</span></button>
-        <button id="mouse-start" class="text-button" type="button">마우스로 먼저 체험하기</button>
-        <p class="sound-note">시작하면 잔잔한 음악과 효과음이 함께해요.</p>
-        <p id="privacy-note" class="privacy-note">카메라는 손동작만 읽어요.<br>영상은 저장하거나 전송하지 않아요.</p>
+      <div class="intro-content">
+        <h1><img src="./artwork/poongdeung-lettering-v1.png" width="1254" height="1254" alt="풍등 체험"></h1>
+        <p class="intro-tagline">마음에 품은 빛, 하늘에 닿기를.</p>
+        <p class="description">두 손으로 온기를 모아, 소원을 띄워보세요.</p>
+        <div class="controls" aria-label="체험 시작 방법">
+          <button id="camera-start" class="primary-button" type="button" aria-describedby="privacy-note">손으로 시작하기 <span aria-hidden="true">↗</span></button>
+          <button id="mouse-start" class="text-button" type="button">마우스로 체험하기</button>
+        </div>
       </div>
+      <footer class="intro-notes">
+        <p id="privacy-note">카메라는 손동작만 인식해요. 영상은 저장하거나 전송하지 않아요.</p>
+        <p><span aria-hidden="true">♫</span> 잔잔한 음악과 함께해요.</p>
+      </footer>
     </main>
 
     <section id="instruction" class="instruction" aria-live="polite" aria-atomic="true" aria-label="현재 할 동작">
@@ -87,11 +89,6 @@
 
     <p id="status" role="status">밤하늘을 준비하고 있어요.</p>
 
-    <footer class="scene-caption">
-      <span class="caption-star" aria-hidden="true">✦</span>
-      <p>잠시 머물고, 천천히 놓아주세요</p>
-    </footer>
-
     <noscript>풍등을 보려면 브라우저의 JavaScript를 켜 주세요.</noscript>
     <script>
       // Keep the recovery shortcut independent of the experience modules.
@@ -101,6 +98,6 @@
         window.location.reload();
       });
     </script>
-    <script type="module" src="./script.js?v=gathering-choice-1"></script>
+    <script type="module" src="./script.js?v=lettering-1"></script>
   </body>
 </html>
